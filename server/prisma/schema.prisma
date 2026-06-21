@@ -43,6 +43,11 @@ model Student {
   marks                 Marks[]
   feePayments           FeePayment[]
   homeworkNotifications HomeworkNotification[]
+  feeReports            StudentFeeReport[]
+
+  @@index([class])
+  @@index([status])
+  @@index([class, status])
 }
 
 model Admission {
@@ -66,6 +71,9 @@ model Admission {
   passport_photo        String?
   created_date          DateTime  @default(now())
   updated_date          DateTime  @updatedAt
+
+  @@index([academic_year, form_status])
+  @@index([branch])
 }
 
 model FeePayment {
@@ -82,11 +90,15 @@ model FeePayment {
   status        String    @default("Pending")
   created_date  DateTime  @default(now())
   updated_date  DateTime  @updatedAt
+
+  @@index([student_id])
+  @@index([academic_year, status])
 }
 
 model StudentFeeReport {
   id               String   @id @default(uuid())
   student_id       String?
+  student          Student? @relation(fields: [student_id], references: [id], onDelete: SetNull)
   student_name     String
   father_name      String
   mob_number       String
@@ -107,6 +119,9 @@ model StudentFeeReport {
   status           String   @default("Active")
   created_date     DateTime @default(now())
   updated_date     DateTime @updatedAt
+
+  @@index([class])
+  @@index([student_id])
 }
 
 model Expenditure {
@@ -119,6 +134,9 @@ model Expenditure {
   approved_by  String?
   created_date DateTime @default(now())
   updated_date DateTime @updatedAt
+
+  @@index([date])
+  @@index([category])
 }
 
 model Staff {
@@ -135,6 +153,8 @@ model Staff {
   status         String    @default("Active")
   created_date   DateTime  @default(now())
   updated_date   DateTime  @updatedAt
+
+  @@index([role, status])
 }
 
 model Attendance {
@@ -148,6 +168,9 @@ model Attendance {
   status       String   @default("Present")
   marked_by    String?
   created_date DateTime @default(now())
+
+  @@unique([student_id, date])
+  @@index([class, date])
 }
 
 model Marks {
@@ -163,6 +186,9 @@ model Marks {
   grade          String?
   created_date   DateTime @default(now())
   updated_date   DateTime @updatedAt
+
+  @@index([student_id])
+  @@index([class, exam_type])
 }
 
 model Homework {
@@ -178,6 +204,8 @@ model Homework {
   created_date  DateTime               @default(now())
   updated_date  DateTime               @updatedAt
   notifications HomeworkNotification[]
+
+  @@index([class, status])
 }
 
 model HomeworkNotification {
@@ -196,6 +224,8 @@ model HomeworkNotification {
   student_name String?
   is_read      Boolean   @default(false)
   created_date DateTime  @default(now())
+
+  @@index([student_id, is_read])
 }
 
 model ExamSchedule {
@@ -210,6 +240,9 @@ model ExamSchedule {
   subjects      Json
   created_date  DateTime @default(now())
   updated_date  DateTime @updatedAt
+
+  @@index([class, exam_type])
+  @@index([academic_year])
 }
 
 model Income {
@@ -222,4 +255,8 @@ model Income {
   payment_method String?
   notes          String?
   created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+
+  @@index([date])
+  @@index([category])
 }

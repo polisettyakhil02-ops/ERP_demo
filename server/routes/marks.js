@@ -1,5 +1,6 @@
 const express = require('express')
 const { z } = require('zod')
+const paginate = require('../lib/paginate')
 
 const prisma = require('../lib/prisma')
 const validate = require('../lib/validate')
@@ -19,12 +20,6 @@ const marksSchema = z.object({
 })
 
 const updateSchema = marksSchema.partial()
-
-function paginate(query) {
-  const limit = Math.min(500, Math.max(1, parseInt(query.limit) || 200))
-  const skip = Math.max(0, (parseInt(query.page) || 1) - 1) * limit
-  return { take: limit, skip }
-}
 
 router.get('/', requireRole('teacher', 'principal', 'consultant'), async (req, res, next) => {
   try {

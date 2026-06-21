@@ -1,8 +1,13 @@
 require('dotenv').config()
+require('./lib/env')()
+
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
+const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 
+const prisma = require('./lib/prisma')
 const authMiddleware = require('./middleware/auth')
 const errorHandler = require('./middleware/errorHandler')
 
@@ -22,6 +27,8 @@ const incomeRoutes = require('./routes/income')
 
 const app = express()
 
+app.use(helmet())
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
@@ -58,4 +65,16 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 4000
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+
+async function shutdown(signal) {
+  console.log(`\n[${signal}] Shutting down gracefully...`)
+  server.close(async () => {
+    await prisma.$disconnect()
+    process.exit(0)
+  })
+  setTimeout(() => process.exit(1), 10_000)
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))

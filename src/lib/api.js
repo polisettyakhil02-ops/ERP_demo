@@ -9,18 +9,30 @@ const request = async (method, path, body, params) => {
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v)
     })
   }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15_000)
+
   const headers = { Authorization: `Bearer ${getToken()}` }
   if (body) headers['Content-Type'] = 'application/json'
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  try {
+    const res = await fetch(url.toString(), {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
 
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-  return data
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `Server error (${res.status})`)
+    return data
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Request timed out. Please try again.')
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 const api = {

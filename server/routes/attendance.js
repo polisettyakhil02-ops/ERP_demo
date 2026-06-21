@@ -22,6 +22,11 @@ const recordSchema = z.object({
 
 const bulkSchema = z.array(recordSchema).min(1)
 
+function toMidnightUTC(dateStr) {
+  const d = new Date(dateStr)
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
 router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
   try {
     const { student_id, date, class: cls, section } = req.query
@@ -30,11 +35,8 @@ router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
     if (cls) where.class = cls
     if (section) where.section = section
     if (date) {
-      const d = new Date(date)
-      where.date = {
-        gte: new Date(new Date(d).setHours(0, 0, 0, 0)),
-        lt: new Date(new Date(d).setHours(23, 59, 59, 999)),
-      }
+      const midnight = toMidnightUTC(date)
+      where.date = { gte: midnight, lt: new Date(midnight.getTime() + 86_400_000) }
     }
     const items = await prisma.attendance.findMany({ where, orderBy: { date: 'desc' } })
     res.json(items)
@@ -43,7 +45,12 @@ router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
 
 router.post('/', requireRole(...WRITE_ROLES), validate(recordSchema), async (req, res, next) => {
   try {
-    const item = await prisma.attendance.create({ data: { ...req.body, date: new Date(req.body.date) } })
+    const date = toMidnightUTC(req.body.date)
+    const item = await prisma.attendance.upsert({
+      where: { student_id_date: { student_id: req.body.student_id, date } },
+      update: { status: req.body.status },
+      create: { ...req.body, date },
+    })
     res.status(201).json(item)
   } catch (err) { next(err) }
 })
@@ -51,37 +58,19 @@ router.post('/', requireRole(...WRITE_ROLES), validate(recordSchema), async (req
 router.post('/bulk', requireRole(...WRITE_ROLES), validate(bulkSchema), async (req, res, next) => {
   try {
     const records = req.body
-    if (!records.length) return res.json({ count: 0, records: [] })
 
-    const dateObj = new Date(records[0].date)
-    const dayStart = new Date(new Date(dateObj).setHours(0, 0, 0, 0))
-    const dayEnd = new Date(new Date(dateObj).setHours(23, 59, 59, 999))
+    const results = await prisma.$transaction(
+      records.map(r => {
+        const date = toMidnightUTC(r.date)
+        return prisma.attendance.upsert({
+          where: { student_id_date: { student_id: r.student_id, date } },
+          update: { status: r.status },
+          create: { ...r, date },
+        })
+      })
+    )
 
-    const existing = await prisma.attendance.findMany({
-      where: {
-        student_id: { in: records.map(r => r.student_id) },
-        date: { gte: dayStart, lt: dayEnd },
-      },
-      select: { id: true, student_id: true },
-    })
-    const existingMap = new Map(existing.map(r => [r.student_id, r.id]))
-
-    const toCreate = []
-    const toUpdate = []
-    for (const r of records) {
-      if (existingMap.has(r.student_id)) {
-        toUpdate.push({ id: existingMap.get(r.student_id), status: r.status })
-      } else {
-        toCreate.push({ ...r, date: new Date(r.date) })
-      }
-    }
-
-    const results = await prisma.$transaction([
-      ...(toCreate.length ? [prisma.attendance.createMany({ data: toCreate, skipDuplicates: true })] : []),
-      ...toUpdate.map(u => prisma.attendance.update({ where: { id: u.id }, data: { status: u.status } })),
-    ])
-
-    res.json({ count: records.length })
+    res.json({ count: results.length })
   } catch (err) { next(err) }
 })
 

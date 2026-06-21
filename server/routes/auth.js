@@ -5,6 +5,8 @@ const { z } = require('zod')
 
 const prisma = require('../lib/prisma')
 const validate = require('../lib/validate')
+const authMiddleware = require('../middleware/auth')
+const { requireRole } = require('../middleware/auth')
 
 const router = express.Router()
 
@@ -68,7 +70,7 @@ router.get('/me', (req, res) => {
   }
 })
 
-router.post('/invite', validate(inviteSchema), async (req, res, next) => {
+router.post('/invite', authMiddleware, requireRole('principal'), validate(inviteSchema), async (req, res, next) => {
   try {
     const { email, full_name, role, branch, password } = req.body
     const hashed = await bcrypt.hash(password || 'demo123', 10)
@@ -78,7 +80,12 @@ router.post('/invite', validate(inviteSchema), async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.post('/seed', async (req, res, next) => {
+router.post('/seed', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Seed endpoint is disabled in production.' })
+  }
+  next()
+}, async (req, res, next) => {
   try {
     const demoUsers = [
       { email: 'finance@mastermindserp.com', full_name: 'Finance Admin', role: 'finance', branch: 'Hyderabad' },

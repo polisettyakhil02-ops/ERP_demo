@@ -1,3 +1,4 @@
+import { Component } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/lib/AuthContext'
@@ -7,6 +8,36 @@ import RoleLogin from '@/pages/RoleLogin'
 import StudentPortal from '@/pages/StudentPortal'
 import LoginPage from '@/pages/LoginPage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+
+class ErrorBoundary extends Component {
+  state = { error: null }
+
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary]', error, info.componentStack)
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+          <h1 className="text-xl font-semibold text-destructive">Something went wrong</h1>
+          <p className="text-sm text-muted-foreground max-w-md">{this.state.error.message}</p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
+          >
+            Try again
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // Dashboards
 import FinanceDashboard from '@/pages/dashboards/FinanceDashboard'
@@ -103,14 +134,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RoleProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-        </RoleProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RoleProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </RoleProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
