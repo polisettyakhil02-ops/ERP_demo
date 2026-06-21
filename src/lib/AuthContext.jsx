@@ -34,7 +34,12 @@ export function AuthProvider({ children }) {
     return data.student
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Proceed with local logout even if server call fails
+    }
     localStorage.removeItem('token')
     localStorage.removeItem('studentData')
     localStorage.removeItem('activeRole')

@@ -1,10 +1,22 @@
 const jwt = require('jsonwebtoken')
+const prisma = require('../lib/prisma')
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]
   if (!token) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    // For staff users verify the token hasn't been revoked via logout
+    if (decoded.role !== 'student' && decoded.version !== undefined) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { token_version: true },
+      })
+      if (!user || user.token_version !== decoded.version) {
+        return res.status(401).json({ error: 'Session expired. Please log in again.' })
+      }
+    }
+    req.user = decoded
     next()
   } catch {
     res.status(401).json({ error: 'Invalid token' })

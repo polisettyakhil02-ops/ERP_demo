@@ -1,5 +1,6 @@
 const express = require('express')
 const { z } = require('zod')
+const paginate = require('../lib/paginate')
 
 const prisma = require('../lib/prisma')
 const validate = require('../lib/validate')
@@ -20,7 +21,7 @@ const recordSchema = z.object({
   marked_by: z.string().optional(),
 })
 
-const bulkSchema = z.array(recordSchema).min(1)
+const bulkSchema = z.array(recordSchema).min(1).max(100)
 
 function toMidnightUTC(dateStr) {
   const d = new Date(dateStr)
@@ -38,7 +39,7 @@ router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
       const midnight = toMidnightUTC(date)
       where.date = { gte: midnight, lt: new Date(midnight.getTime() + 86_400_000) }
     }
-    const items = await prisma.attendance.findMany({ where, orderBy: { date: 'desc' } })
+    const items = await prisma.attendance.findMany({ where, orderBy: { date: 'desc' }, ...paginate(req.query) })
     res.json(items)
   } catch (err) { next(err) }
 })
@@ -46,10 +47,11 @@ router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
 router.post('/', requireRole(...WRITE_ROLES), validate(recordSchema), async (req, res, next) => {
   try {
     const date = toMidnightUTC(req.body.date)
+    const markedBy = req.user.id
     const item = await prisma.attendance.upsert({
       where: { student_id_date: { student_id: req.body.student_id, date } },
-      update: { status: req.body.status },
-      create: { ...req.body, date },
+      update: { status: req.body.status, marked_by: markedBy },
+      create: { ...req.body, date, marked_by: markedBy },
     })
     res.status(201).json(item)
   } catch (err) { next(err) }
@@ -59,13 +61,14 @@ router.post('/bulk', requireRole(...WRITE_ROLES), validate(bulkSchema), async (r
   try {
     const records = req.body
 
+    const markedBy = req.user.id
     const results = await prisma.$transaction(
       records.map(r => {
         const date = toMidnightUTC(r.date)
         return prisma.attendance.upsert({
           where: { student_id_date: { student_id: r.student_id, date } },
-          update: { status: r.status },
-          create: { ...r, date },
+          update: { status: r.status, marked_by: markedBy },
+          create: { ...r, date, marked_by: markedBy },
         })
       })
     )

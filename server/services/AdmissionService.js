@@ -26,6 +26,7 @@ async function convertToStudent(admissionId) {
         class: adm.class_sought,
         parent_name: adm.father_name,
         parent_phone: adm.father_mobile,
+        branch: adm.branch,
         status: 'Active',
         joining_date: new Date(),
       },

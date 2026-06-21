@@ -24,7 +24,7 @@ const inviteSchema = z.object({
   full_name: z.string().min(1),
   role: z.enum(['finance', 'teacher', 'principal', 'consultant']),
   branch: z.string().optional(),
-  password: z.string().min(6).optional(),
+  password: z.string().min(8),
 })
 
 router.post('/login', validate(loginSchema), async (req, res, next) => {
@@ -37,11 +37,11 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, branch: user.branch },
+      { id: user.id, role: user.role, branch: user.branch, version: user.token_version },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
-    const { password: _, ...userSafe } = user
+    const { password: _, token_version: __, ...userSafe } = user
     res.json({ token, user: userSafe })
   } catch (err) { next(err) }
 })
@@ -49,7 +49,9 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 router.post('/student-login', validate(studentLoginSchema), async (req, res, next) => {
   try {
     const student = await prisma.student.findUnique({ where: { admission_no: req.body.admission_no } })
-    if (!student) return res.status(404).json({ error: 'Student not found' })
+    if (!student || student.status !== 'Active') {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
 
     const token = jwt.sign(
       { id: student.id, role: 'student', admission_no: student.admission_no },
@@ -60,29 +62,35 @@ router.post('/student-login', validate(studentLoginSchema), async (req, res, nex
   } catch (err) { next(err) }
 })
 
-router.get('/me', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1]
-  if (!token) return res.status(401).json({ error: 'Unauthorized' })
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user })
+})
+
+router.post('/logout', authMiddleware, async (req, res, next) => {
   try {
-    res.json({ user: jwt.verify(token, process.env.JWT_SECRET) })
-  } catch {
-    res.status(401).json({ error: 'Invalid token' })
-  }
+    if (req.user.role !== 'student') {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { token_version: { increment: 1 } },
+      })
+    }
+    res.json({ success: true })
+  } catch (err) { next(err) }
 })
 
 router.post('/invite', authMiddleware, requireRole('principal'), validate(inviteSchema), async (req, res, next) => {
   try {
     const { email, full_name, role, branch, password } = req.body
-    const hashed = await bcrypt.hash(password || 'demo123', 10)
+    const hashed = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({ data: { email, full_name, role, branch, password: hashed } })
-    const { password: _, ...safe } = user
+    const { password: _, token_version: __, ...safe } = user
     res.json(safe)
   } catch (err) { next(err) }
 })
 
 router.post('/seed', (req, res, next) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ error: 'Seed endpoint is disabled in production.' })
+  if (process.env.SEED_ENABLED !== 'true') {
+    return res.status(403).json({ error: 'Seed endpoint is disabled.' })
   }
   next()
 }, async (req, res, next) => {
@@ -99,7 +107,7 @@ router.post('/seed', (req, res, next) => {
       const existing = await prisma.user.findUnique({ where: { email: u.email } })
       if (!existing) {
         const user = await prisma.user.create({ data: { ...u, password: hashed } })
-        const { password: _, ...safe } = user
+        const { password: _, token_version: __, ...safe } = user
         created.push(safe)
       }
     }

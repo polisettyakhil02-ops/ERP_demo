@@ -36,6 +36,10 @@ router.get('/', requireRole(...STAFF_ROLES), async (req, res, next) => {
   try {
     const { class: cls, section, status, search } = req.query
     const where = {}
+    // Non-consultants are restricted to their own branch
+    if (req.user.role !== 'consultant' && req.user.branch) {
+      where.branch = req.user.branch
+    }
     if (cls) where.class = cls
     if (section) where.section = section
     if (status) where.status = status
@@ -62,7 +66,8 @@ router.get('/:id', requireRole(...STAFF_ROLES), async (req, res, next) => {
 
 router.post('/', requireRole(...WRITE_ROLES), validate(studentSchema), async (req, res, next) => {
   try {
-    const s = await prisma.student.create({ data: req.body })
+    const branch = req.user.branch || req.body.branch
+    const s = await prisma.student.create({ data: { ...req.body, branch } })
     res.status(201).json(s)
   } catch (err) { next(err) }
 })

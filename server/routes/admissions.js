@@ -38,7 +38,12 @@ router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
   try {
     const { branch, status, class: cls, year, search } = req.query
     const where = {}
-    if (branch) where.branch = branch
+    // Non-consultants are restricted to their own branch
+    if (req.user.role !== 'consultant' && req.user.branch) {
+      where.branch = req.user.branch
+    } else if (branch) {
+      where.branch = branch
+    }
     if (status) where.form_status = status
     if (cls) where.class_sought = cls
     if (year) where.academic_year = year

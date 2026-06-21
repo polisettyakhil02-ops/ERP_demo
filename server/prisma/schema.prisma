@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  full_name    String
-  password     String
-  role         String
-  branch       String?
-  created_date DateTime @default(now())
-  updated_date DateTime @updatedAt
+  id            String   @id @default(uuid())
+  email         String   @unique
+  full_name     String
+  password      String
+  role          String
+  branch        String?
+  token_version Int      @default(0)
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
 }
 
 model Student {
@@ -36,6 +37,7 @@ model Student {
   joining_date DateTime?
   status       String   @default("Active")
   photo_url    String?
+  branch       String?
   created_date DateTime @default(now())
   updated_date DateTime @updatedAt
 
@@ -88,6 +90,8 @@ model FeePayment {
   payment_mode  String    @default("Cash")
   receipt_no    String?
   status        String    @default("Pending")
+  created_by    String?
+  updated_by    String?
   created_date  DateTime  @default(now())
   updated_date  DateTime  @updatedAt
 
@@ -117,6 +121,8 @@ model StudentFeeReport {
   balance_term_fee Float?
   remarks          String?
   status           String   @default("Active")
+  created_by       String?
+  updated_by       String?
   created_date     DateTime @default(now())
   updated_date     DateTime @updatedAt
 
@@ -132,6 +138,8 @@ model Expenditure {
   date         DateTime
   paid_to      String?
   approved_by  String?
+  created_by   String?
+  updated_by   String?
   created_date DateTime @default(now())
   updated_date DateTime @updatedAt
 
@@ -254,6 +262,8 @@ model Income {
   received_from  String?
   payment_method String?
   notes          String?
+  created_by     String?
+  updated_by     String?
   created_date   DateTime @default(now())
   updated_date   DateTime @updatedAt
 

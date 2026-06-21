@@ -50,7 +50,7 @@ router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => 
 
 router.post('/', requireRole('finance'), validate(feeReportSchema), async (req, res, next) => {
   try {
-    const item = await prisma.studentFeeReport.create({ data: req.body })
+    const item = await prisma.studentFeeReport.create({ data: { ...req.body, created_by: req.user.id } })
     res.status(201).json(item)
   } catch (err) { next(err) }
 })
@@ -58,7 +58,7 @@ router.post('/', requireRole('finance'), validate(feeReportSchema), async (req, 
 router.put('/:id', requireRole('finance'), validate(updateSchema), async (req, res, next) => {
   try {
     const { id, created_date, updated_date, ...data } = req.body
-    const item = await prisma.studentFeeReport.update({ where: { id: req.params.id }, data })
+    const item = await prisma.studentFeeReport.update({ where: { id: req.params.id }, data: { ...data, updated_by: req.user.id } })
     res.json(item)
   } catch (err) { next(err) }
 })

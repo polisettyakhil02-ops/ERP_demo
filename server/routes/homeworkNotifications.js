@@ -32,8 +32,11 @@ router.get('/', requireRole(...ALLOWED), async (req, res, next) => {
 
 router.put('/:id/read', requireRole(...ALLOWED), async (req, res, next) => {
   try {
+    const where = { id: req.params.id }
+    // Students can only mark their own notifications as read
+    if (req.user.role === 'student') where.student_id = req.user.id
     const item = await prisma.homeworkNotification.update({
-      where: { id: req.params.id },
+      where,
       data: { is_read: true },
     })
     res.json(item)

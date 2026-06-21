@@ -8,7 +8,7 @@ const { requireRole } = require('../middleware/auth')
 
 const router = express.Router()
 
-const marksSchema = z.object({
+const marksBaseSchema = z.object({
   student_id: z.string().uuid(),
   exam_type: z.string().min(1),
   subject: z.string().min(1),
@@ -19,7 +19,12 @@ const marksSchema = z.object({
   grade: z.string().optional(),
 })
 
-const updateSchema = marksSchema.partial()
+const marksSchema = marksBaseSchema.refine(
+  d => d.marks_obtained <= d.max_marks,
+  { message: 'marks_obtained cannot exceed max_marks', path: ['marks_obtained'] }
+)
+
+const updateSchema = marksBaseSchema.partial()
 
 router.get('/', requireRole('teacher', 'principal', 'consultant'), async (req, res, next) => {
   try {
