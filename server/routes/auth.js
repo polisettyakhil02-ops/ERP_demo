@@ -1,17 +1,33 @@
 const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const { PrismaClient } = require('@prisma/client')
+const { z } = require('zod')
+
+const prisma = require('../lib/prisma')
+const validate = require('../lib/validate')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+})
+
+const studentLoginSchema = z.object({
+  admission_no: z.string().min(1),
+})
+
+const inviteSchema = z.object({
+  email: z.string().email(),
+  full_name: z.string().min(1),
+  role: z.enum(['finance', 'teacher', 'principal', 'consultant']),
+  branch: z.string().optional(),
+  password: z.string().min(6).optional(),
+})
+
+router.post('/login', validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
-
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
@@ -23,21 +39,14 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
-
     const { password: _, ...userSafe } = user
     res.json({ token, user: userSafe })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { next(err) }
 })
 
-// POST /api/auth/student-login
-router.post('/student-login', async (req, res) => {
+router.post('/student-login', validate(studentLoginSchema), async (req, res, next) => {
   try {
-    const { admission_no } = req.body
-    if (!admission_no) return res.status(400).json({ error: 'Admission number required' })
-
-    const student = await prisma.student.findUnique({ where: { admission_no } })
+    const student = await prisma.student.findUnique({ where: { admission_no: req.body.admission_no } })
     if (!student) return res.status(404).json({ error: 'Student not found' })
 
     const token = jwt.sign(
@@ -45,42 +54,31 @@ router.post('/student-login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     )
-
     res.json({ token, student })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { next(err) }
 })
 
-// GET /api/auth/me
 router.get('/me', (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]
   if (!token) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    res.json({ user: decoded })
+    res.json({ user: jwt.verify(token, process.env.JWT_SECRET) })
   } catch {
     res.status(401).json({ error: 'Invalid token' })
   }
 })
 
-// POST /api/auth/invite — admin creates user
-router.post('/invite', async (req, res) => {
+router.post('/invite', validate(inviteSchema), async (req, res, next) => {
   try {
     const { email, full_name, role, branch, password } = req.body
     const hashed = await bcrypt.hash(password || 'demo123', 10)
-    const user = await prisma.user.create({
-      data: { email, full_name, role, branch, password: hashed }
-    })
+    const user = await prisma.user.create({ data: { email, full_name, role, branch, password: hashed } })
     const { password: _, ...safe } = user
     res.json(safe)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { next(err) }
 })
 
-// POST /api/auth/seed — seed demo users
-router.post('/seed', async (req, res) => {
+router.post('/seed', async (req, res, next) => {
   try {
     const demoUsers = [
       { email: 'finance@mastermindserp.com', full_name: 'Finance Admin', role: 'finance', branch: 'Hyderabad' },
@@ -99,9 +97,7 @@ router.post('/seed', async (req, res) => {
       }
     }
     res.json({ seeded: created.length, users: created })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { next(err) }
 })
 
 module.exports = router

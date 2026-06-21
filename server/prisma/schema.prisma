@@ -194,7 +194,7 @@ model HomeworkNotification {
   student_id   String
   student      Student   @relation(fields: [student_id], references: [id], onDelete: Cascade)
   student_name String?
-  status       String    @default("Unread")
+  is_read      Boolean   @default(false)
   created_date DateTime  @default(now())
 }
 

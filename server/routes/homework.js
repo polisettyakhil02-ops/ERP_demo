@@ -1,10 +1,27 @@
 const express = require('express')
-const { PrismaClient } = require('@prisma/client')
+const { z } = require('zod')
+
+const prisma = require('../lib/prisma')
+const validate = require('../lib/validate')
+const { requireRole } = require('../middleware/auth')
+const { notifyStudents } = require('../services/HomeworkService')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
-router.get('/', async (req, res) => {
+const homeworkSchema = z.object({
+  title: z.string().min(1),
+  class: z.string().min(1),
+  subject: z.string().min(1),
+  due_date: z.string().min(1).transform(v => new Date(v)),
+  section: z.string().optional(),
+  description: z.string().optional(),
+  assigned_by: z.string().optional(),
+  status: z.string().optional(),
+})
+
+const updateSchema = homeworkSchema.partial()
+
+router.get('/', requireRole('teacher', 'principal'), async (req, res, next) => {
   try {
     const { class: cls, subject, status } = req.query
     const where = {}
@@ -13,58 +30,36 @@ router.get('/', async (req, res) => {
     if (status) where.status = status
     const items = await prisma.homework.findMany({ where, orderBy: { due_date: 'desc' } })
     res.json(items)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole('teacher', 'principal'), validate(homeworkSchema), async (req, res, next) => {
   try {
     const item = await prisma.homework.create({ data: req.body })
     res.status(201).json(item)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRole('teacher', 'principal'), validate(updateSchema), async (req, res, next) => {
   try {
     const { id, created_date, updated_date, ...data } = req.body
     const item = await prisma.homework.update({ where: { id: req.params.id }, data })
     res.json(item)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('teacher', 'principal'), async (req, res, next) => {
   try {
     await prisma.homework.delete({ where: { id: req.params.id } })
     res.json({ success: true })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-// Notify students in the homework's class
-router.post('/:id/notify', async (req, res) => {
+router.post('/:id/notify', requireRole('teacher', 'principal'), async (req, res, next) => {
   try {
-    const hw = await prisma.homework.findUnique({ where: { id: req.params.id } })
-    if (!hw) return res.status(404).json({ error: 'Homework not found' })
-
-    const students = await prisma.student.findMany({
-      where: { class: hw.class, status: 'Active' },
-      select: { id: true }
-    })
-
-    const notifications = []
-    for (const s of students) {
-      const existing = await prisma.homeworkNotification.findFirst({
-        where: { homework_id: hw.id, student_id: s.id }
-      })
-      if (!existing) {
-        const n = await prisma.homeworkNotification.create({
-          data: { homework_id: hw.id, student_id: s.id, is_read: false }
-        })
-        notifications.push(n)
-      }
-    }
-
-    await prisma.homework.update({ where: { id: hw.id }, data: { status: 'Notified' } })
-    res.json({ count: notifications.length, notifications })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    const result = await notifyStudents(req.params.id)
+    res.json(result)
+  } catch (err) { next(err) }
 })
 
 module.exports = router

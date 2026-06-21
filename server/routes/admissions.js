@@ -1,10 +1,45 @@
 const express = require('express')
-const { PrismaClient } = require('@prisma/client')
+const { z } = require('zod')
+
+const prisma = require('../lib/prisma')
+const validate = require('../lib/validate')
+const { requireRole } = require('../middleware/auth')
+const { convertToStudent } = require('../services/AdmissionService')
 
 const router = express.Router()
-const prisma = new PrismaClient()
 
-router.get('/', async (req, res) => {
+const READ_ROLES = ['finance', 'principal', 'consultant']
+const WRITE_ROLES = ['finance', 'principal']
+
+const admissionSchema = z.object({
+  academic_year: z.string().min(1),
+  application_no: z.string().min(1),
+  class_sought: z.string().min(1),
+  student_name: z.string().min(1),
+  gender: z.enum(['Male', 'Female', 'Other']).optional(),
+  dob: z.string().optional().transform(v => v ? new Date(v) : undefined),
+  father_name: z.string().optional(),
+  father_mobile: z.string().optional(),
+  mother_name: z.string().optional(),
+  mother_mobile: z.string().optional(),
+  communication_address: z.string().optional(),
+  branch: z.string().optional(),
+  state: z.string().optional(),
+  form_status: z.string().optional(),
+  admission_no: z.string().optional(),
+  fee_payable_amount: z.number().nonnegative().optional(),
+  passport_photo: z.string().optional(),
+})
+
+const updateSchema = admissionSchema.partial()
+
+function paginate(query) {
+  const limit = Math.min(500, Math.max(1, parseInt(query.limit) || 100))
+  const skip = Math.max(0, (parseInt(query.page) || 1) - 1) * limit
+  return { take: limit, skip }
+}
+
+router.get('/', requireRole(...READ_ROLES), async (req, res, next) => {
   try {
     const { branch, status, class: cls, year, search } = req.query
     const where = {}
@@ -16,63 +51,50 @@ router.get('/', async (req, res) => {
       { student_name: { contains: search, mode: 'insensitive' } },
       { application_no: { contains: search, mode: 'insensitive' } },
     ]
-    const items = await prisma.admission.findMany({ where, orderBy: { created_date: 'desc' } })
+    const items = await prisma.admission.findMany({
+      where,
+      orderBy: { created_date: 'desc' },
+      ...paginate(req.query),
+    })
     res.json(items)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireRole(...READ_ROLES), async (req, res, next) => {
   try {
     const item = await prisma.admission.findUnique({ where: { id: req.params.id } })
-    if (!item) return res.status(404).json({ error: 'Not found' })
+    if (!item) return res.status(404).json({ error: 'Admission not found' })
     res.json(item)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole(...WRITE_ROLES), validate(admissionSchema), async (req, res, next) => {
   try {
     const item = await prisma.admission.create({ data: req.body })
     res.status(201).json(item)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRole(...WRITE_ROLES), validate(updateSchema), async (req, res, next) => {
   try {
     const { id, created_date, updated_date, ...data } = req.body
     const item = await prisma.admission.update({ where: { id: req.params.id }, data })
     res.json(item)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole(...WRITE_ROLES), async (req, res, next) => {
   try {
     await prisma.admission.delete({ where: { id: req.params.id } })
     res.json({ success: true })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
-// Convert admission to student
-router.post('/:id/convert', async (req, res) => {
+router.post('/:id/convert', requireRole(...WRITE_ROLES), async (req, res, next) => {
   try {
-    const adm = await prisma.admission.findUnique({ where: { id: req.params.id } })
-    if (!adm) return res.status(404).json({ error: 'Admission not found' })
-    const adm_no = adm.admission_no || `ADM${Date.now()}`
-    const student = await prisma.student.create({
-      data: {
-        admission_no: adm_no,
-        full_name: adm.student_name,
-        gender: adm.gender,
-        dob: adm.dob,
-        class: adm.class_sought,
-        parent_name: adm.father_name,
-        parent_phone: adm.father_mobile,
-        status: 'Active',
-        joining_date: new Date(),
-      }
-    })
-    await prisma.admission.update({ where: { id: req.params.id }, data: { form_status: 'Admitted', admission_no: adm_no } })
+    const student = await convertToStudent(req.params.id)
     res.json(student)
-  } catch (err) { res.status(500).json({ error: err.message }) }
+  } catch (err) { next(err) }
 })
 
 module.exports = router
