@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  full_name    String
+  password     String
+  role         String
+  branch       String?
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}
+
+model Student {
+  id           String   @id @default(uuid())
+  admission_no String   @unique
+  full_name    String
+  dob          DateTime?
+  gender       String?
+  blood_group  String?
+  class        String
+  section      String?
+  roll_no      String?
+  parent_name  String?
+  parent_phone String?
+  parent_email String?
+  address      String?
+  city         String?
+  joining_date DateTime?
+  status       String   @default("Active")
+  photo_url    String?
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+
+  attendance            Attendance[]
+  marks                 Marks[]
+  feePayments           FeePayment[]
+  homeworkNotifications HomeworkNotification[]
+}
+
+model Admission {
+  id                    String    @id @default(uuid())
+  academic_year         String
+  application_no        String    @unique
+  admission_no          String?
+  branch                String?
+  state                 String?
+  form_status           String    @default("Enquiry")
+  class_sought          String
+  student_name          String
+  gender                String    @default("Male")
+  dob                   DateTime?
+  father_name           String?
+  father_mobile         String    @default("")
+  mother_name           String?
+  mother_mobile         String    @default("")
+  communication_address String    @default("")
+  fee_payable_amount    Float     @default(0)
+  passport_photo        String?
+  created_date          DateTime  @default(now())
+  updated_date          DateTime  @updatedAt
+}
+
+model FeePayment {
+  id            String    @id @default(uuid())
+  student_id    String
+  student       Student   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  student_name  String?
+  academic_year String
+  fee_type      String
+  amount        Float
+  payment_date  DateTime?
+  payment_mode  String    @default("Cash")
+  receipt_no    String?
+  status        String    @default("Pending")
+  created_date  DateTime  @default(now())
+  updated_date  DateTime  @updatedAt
+}
+
+model StudentFeeReport {
+  id               String   @id @default(uuid())
+  student_id       String?
+  student_name     String
+  father_name      String
+  mob_number       String
+  class            String
+  student_type     String
+  old_fee          Float    @default(0)
+  adm_gross_fee    Float    @default(0)
+  adm_concession   Float    @default(0)
+  net_adm_fee      Float?
+  paid_adm_fee     Float    @default(0)
+  balance_adm_fee  Float?
+  gross_term_fee   Float    @default(0)
+  term_concession  Float    @default(0)
+  net_term_fee     Float?
+  paid_term_fee    Float    @default(0)
+  balance_term_fee Float?
+  remarks          String?
+  status           String   @default("Active")
+  created_date     DateTime @default(now())
+  updated_date     DateTime @updatedAt
+}
+
+model Expenditure {
+  id           String   @id @default(uuid())
+  category     String
+  description  String?
+  amount       Float
+  date         DateTime
+  paid_to      String?
+  approved_by  String?
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}
+
+model Staff {
+  id             String    @id @default(uuid())
+  full_name      String
+  role           String
+  subject_taught String?
+  qualification  String?
+  phone          String?
+  email          String?
+  address        String?
+  joining_date   DateTime?
+  salary         Float?
+  status         String    @default("Active")
+  created_date   DateTime  @default(now())
+  updated_date   DateTime  @updatedAt
+}
+
+model Attendance {
+  id           String   @id @default(uuid())
+  student_id   String
+  student      Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  student_name String?
+  class        String?
+  section      String?
+  date         DateTime
+  status       String   @default("Present")
+  marked_by    String?
+  created_date DateTime @default(now())
+}
+
+model Marks {
+  id             String   @id @default(uuid())
+  student_id     String
+  student        Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  student_name   String?
+  class          String?
+  exam_type      String
+  subject        String
+  marks_obtained Float
+  max_marks      Float
+  grade          String?
+  created_date   DateTime @default(now())
+  updated_date   DateTime @updatedAt
+}
+
+model Homework {
+  id            String                 @id @default(uuid())
+  title         String
+  class         String
+  section       String?
+  subject       String
+  description   String?
+  due_date      DateTime
+  assigned_by   String?
+  status        String                 @default("Active")
+  created_date  DateTime               @default(now())
+  updated_date  DateTime               @updatedAt
+  notifications HomeworkNotification[]
+}
+
+model HomeworkNotification {
+  id           String    @id @default(uuid())
+  homework_id  String?
+  homework     Homework? @relation(fields: [homework_id], references: [id], onDelete: SetNull)
+  title        String
+  subject      String
+  description  String?
+  class        String
+  section      String?
+  due_date     DateTime?
+  assigned_by  String?
+  student_id   String
+  student      Student   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  student_name String?
+  status       String    @default("Unread")
+  created_date DateTime  @default(now())
+}
+
+model ExamSchedule {
+  id            String   @id @default(uuid())
+  exam_name     String
+  class         String
+  section       String?
+  academic_year String
+  exam_type     String
+  center        String?
+  invigilator   String?
+  subjects      Json
+  created_date  DateTime @default(now())
+  updated_date  DateTime @updatedAt
+}
+
+model Income {
+  id             String   @id @default(uuid())
+  title          String
+  amount         Float
+  category       String?
+  date           DateTime
+  received_from  String?
+  payment_method String?
+  notes          String?
+  created_date   DateTime @default(now())
+}
