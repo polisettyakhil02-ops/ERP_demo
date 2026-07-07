@@ -151,7 +151,10 @@ model Staff {
   id             String    @id @default(uuid())
   full_name      String
   role           String
+  branch         String?
   subject_taught String?
+  classes_taught Json?
+  aadhar_number  String?
   qualification  String?
   phone          String?
   email          String?
@@ -163,6 +166,7 @@ model Staff {
   updated_date   DateTime  @updatedAt
 
   @@index([role, status])
+  @@index([branch])
 }
 
 model Attendance {

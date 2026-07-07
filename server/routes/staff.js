@@ -11,9 +11,12 @@ const router = express.Router()
 const staffSchema = z.object({
   full_name: z.string().min(1),
   role: z.string().min(1),
+  branch: z.string().optional(),
   subject_taught: z.string().optional(),
+  classes_taught: z.array(z.string()).optional(),
+  aadhar_number: z.string().regex(/^\d{12}$/, 'Aadhar number must be exactly 12 digits').optional().or(z.literal('')),
   qualification: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits').optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
   address: z.string().optional(),
   joining_date: z.string().optional().transform(v => v ? new Date(v) : undefined),
@@ -25,13 +28,20 @@ const updateSchema = staffSchema.partial()
 
 router.get('/', requireRole('principal', 'finance'), async (req, res, next) => {
   try {
-    const { role, status, search } = req.query
+    const { role, status, branch, search } = req.query
     const where = {}
+    // Principals are scoped to their own branch
+    if (req.user.role === 'principal' && req.user.branch) {
+      where.branch = req.user.branch
+    } else if (branch) {
+      where.branch = branch
+    }
     if (role) where.role = role
     if (status) where.status = status
     if (search) where.OR = [
       { full_name: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
     ]
     const items = await prisma.staff.findMany({
       where,
@@ -52,7 +62,10 @@ router.get('/:id', requireRole('principal', 'finance'), async (req, res, next) =
 
 router.post('/', requireRole('principal'), validate(staffSchema), async (req, res, next) => {
   try {
-    const item = await prisma.staff.create({ data: req.body })
+    // Principal's branch auto-stamped if not provided
+    const data = { ...req.body }
+    if (!data.branch && req.user.branch) data.branch = req.user.branch
+    const item = await prisma.staff.create({ data })
     res.status(201).json(item)
   } catch (err) { next(err) }
 })

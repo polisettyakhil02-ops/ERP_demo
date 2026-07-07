@@ -62,6 +62,7 @@ import BusFeeReport from '@/pages/BusFeeReport'
 import StudentReceipt from '@/pages/StudentReceipt'
 import HallTicket from '@/pages/HallTicket'
 import HomeworkManager from '@/pages/HomeworkManager'
+import TeacherForm from '@/pages/TeacherForm'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -126,6 +127,7 @@ function AppRoutes() {
         <Route path="/student-receipt" element={<StudentReceipt />} />
         <Route path="/hall-ticket" element={<HallTicket />} />
         <Route path="/homework-manager" element={<HomeworkManager />} />
+        <Route path="/teacher-form" element={<TeacherForm />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
