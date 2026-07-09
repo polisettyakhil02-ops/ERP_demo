@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, UserCheck, DollarSign, Package,
   ClipboardList, BarChart3, FileText, TrendingUp, Bus,
   Receipt, PieChart, GraduationCap, BookOpen, Ticket,
-  Building2, LogOut, Zap,
+  Building2, LogOut, Zap, Banknote,
 } from 'lucide-react'
 import { useRole, ROLES } from '@/lib/RoleContext'
 import { useAuth } from '@/lib/AuthContext'
@@ -42,6 +42,7 @@ const NAV = {
   ],
   consultant: [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/income', icon: Banknote, label: 'Income' },
     { to: '/student-fee-report', icon: FileText, label: 'Student Fee Report' },
     { to: '/fees', icon: DollarSign, label: 'Fees' },
     { to: '/tracking-expenses', icon: TrendingUp, label: 'Tracking Expenses' },

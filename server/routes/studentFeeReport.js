@@ -34,8 +34,9 @@ const updateSchema = feeReportSchema.partial()
 
 router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => {
   try {
-    const { class: cls, student_type, status } = req.query
+    const { class: cls, student_type, status, student_id } = req.query
     const where = {}
+    if (student_id) where.student_id = student_id
     if (cls) where.class = cls
     if (student_type) where.student_type = student_type
     if (status) where.status = status

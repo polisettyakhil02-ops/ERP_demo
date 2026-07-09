@@ -88,12 +88,17 @@ model FeePayment {
   amount        Float
   payment_date  DateTime?
   payment_mode  String    @default("Cash")
-  receipt_no    String?
-  status        String    @default("Pending")
-  created_by    String?
-  updated_by    String?
-  created_date  DateTime  @default(now())
-  updated_date  DateTime  @updatedAt
+  receipt_no     String?
+  status         String    @default("Pending")
+  voucher_type   String?
+  transaction_no String?
+  bank_name      String?
+  bank_branch    String?
+  cheque_date    DateTime?
+  created_by     String?
+  updated_by     String?
+  created_date   DateTime  @default(now())
+  updated_date   DateTime  @updatedAt
 
   @@index([student_id])
   @@index([academic_year, status])

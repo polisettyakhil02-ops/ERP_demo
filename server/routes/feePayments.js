@@ -8,6 +8,8 @@ const { requireRole } = require('../middleware/auth')
 
 const router = express.Router()
 
+const PAYMENT_MODES = ['Cash', 'Cheque', 'Swipe machine', 'Paytm', 'GooglePay', 'PhonePay', 'OnlineTransfer', 'Others', 'Online', 'DD', 'Card']
+
 const feeSchema = z.object({
   student_id: z.string().uuid(),
   academic_year: z.string().min(1),
@@ -15,9 +17,14 @@ const feeSchema = z.object({
   amount: z.number().nonnegative(),
   student_name: z.string().optional(),
   payment_date: z.string().optional().transform(v => v ? new Date(v) : undefined),
-  payment_mode: z.enum(['Cash', 'Online', 'Cheque', 'DD', 'Card']).optional(),
+  payment_mode: z.enum(PAYMENT_MODES).optional(),
   receipt_no: z.string().optional(),
-  status: z.enum(['Paid', 'Pending', 'Partial']).optional(),
+  status: z.enum(['Paid', 'Pending', 'Partial', 'Cancelled']).optional(),
+  voucher_type: z.string().optional(),
+  transaction_no: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_branch: z.string().optional(),
+  cheque_date: z.string().optional().transform(v => v ? new Date(v) : undefined),
 })
 
 const updateSchema = feeSchema.partial()
@@ -39,14 +46,16 @@ router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => 
   } catch (err) { next(err) }
 })
 
-router.post('/', requireRole('finance'), validate(feeSchema), async (req, res, next) => {
+router.post('/', requireRole('finance', 'consultant'), validate(feeSchema), async (req, res, next) => {
   try {
-    const item = await prisma.feePayment.create({ data: { ...req.body, created_by: req.user.id } })
+    const data = { ...req.body, created_by: req.user.id }
+    if (!data.receipt_no) data.receipt_no = `MV${Date.now().toString().slice(-8)}`
+    const item = await prisma.feePayment.create({ data })
     res.status(201).json(item)
   } catch (err) { next(err) }
 })
 
-router.put('/:id', requireRole('finance'), validate(updateSchema), async (req, res, next) => {
+router.put('/:id', requireRole('finance', 'consultant'), validate(updateSchema), async (req, res, next) => {
   try {
     const { id, created_date, updated_date, student, ...data } = req.body
     const item = await prisma.feePayment.update({ where: { id: req.params.id }, data: { ...data, updated_by: req.user.id } })
