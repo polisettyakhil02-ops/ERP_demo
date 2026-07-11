@@ -15,20 +15,32 @@ const expenditureSchema = z.object({
   description: z.string().optional(),
   paid_to: z.string().optional(),
   approved_by: z.string().optional(),
+  branch: z.string().optional(),
 })
 
 const updateSchema = expenditureSchema.partial()
 
+const bulkItemSchema = z.object({
+  category: z.string().min(1),
+  amount: z.preprocess(v => parseFloat(v), z.number().positive()),
+  date: z.string().min(1).transform(v => new Date(v)),
+  description: z.string().optional(),
+  paid_to: z.string().optional(),
+  approved_by: z.string().optional(),
+  branch: z.string().optional(),
+})
+
 router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => {
   try {
-    const { category, search, from_date, to_date } = req.query
+    const { category, search, from_date, to_date, branch } = req.query
     const where = {}
     if (category) where.category = category
     if (search) where.description = { contains: search, mode: 'insensitive' }
+    if (branch) where.branch = branch
     if (from_date || to_date) {
       where.date = {}
       if (from_date) where.date.gte = new Date(from_date)
-      if (to_date) where.date.lte = new Date(to_date)
+      if (to_date) { const d = new Date(to_date); d.setHours(23, 59, 59, 999); where.date.lte = d }
     }
     const items = await prisma.expenditure.findMany({
       where,
@@ -39,10 +51,32 @@ router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => 
   } catch (err) { next(err) }
 })
 
-router.post('/', requireRole('finance'), validate(expenditureSchema), async (req, res, next) => {
+router.post('/', requireRole('finance', 'consultant'), validate(expenditureSchema), async (req, res, next) => {
   try {
-    const item = await prisma.expenditure.create({ data: { ...req.body, created_by: req.user.id } })
+    const branch = req.body.branch || req.user.branch || undefined
+    const item = await prisma.expenditure.create({ data: { ...req.body, branch, created_by: req.user.id } })
     res.status(201).json(item)
+  } catch (err) { next(err) }
+})
+
+router.post('/bulk', requireRole('finance'), async (req, res, next) => {
+  try {
+    const { records } = req.body
+    if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records array required' })
+    if (records.length > 500) return res.status(400).json({ error: 'Maximum 500 records per bulk upload' })
+
+    const parsed = []
+    const errors = []
+    records.forEach((r, i) => {
+      const result = bulkItemSchema.safeParse(r)
+      if (result.success) parsed.push({ ...result.data, branch: r.branch || req.user.branch || undefined, created_by: req.user.id })
+      else errors.push({ row: i + 2, issues: result.error.issues.map(e => e.message).join('; ') })
+    })
+
+    if (errors.length > 0) return res.status(422).json({ error: 'Validation failed', errors })
+
+    const created = await prisma.expenditure.createMany({ data: parsed })
+    res.status(201).json({ inserted: created.count })
   } catch (err) { next(err) }
 })
 

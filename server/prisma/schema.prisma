@@ -143,6 +143,7 @@ model Expenditure {
   date         DateTime
   paid_to      String?
   approved_by  String?
+  branch       String?
   created_by   String?
   updated_by   String?
   created_date DateTime @default(now())
@@ -150,6 +151,7 @@ model Expenditure {
 
   @@index([date])
   @@index([category])
+  @@index([branch])
 }
 
 model Staff {
@@ -271,6 +273,7 @@ model Income {
   received_from  String?
   payment_method String?
   notes          String?
+  branch         String?
   created_by     String?
   updated_by     String?
   created_date   DateTime @default(now())
@@ -278,4 +281,5 @@ model Income {
 
   @@index([date])
   @@index([category])
+  @@index([branch])
 }

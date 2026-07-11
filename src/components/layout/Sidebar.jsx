@@ -11,17 +11,8 @@ import { useAuth } from '@/lib/AuthContext'
 const NAV = {
   finance: [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/admissions', icon: ClipboardList, label: 'Admissions' },
-    { to: '/students', icon: Users, label: 'Students' },
-    { to: '/staff', icon: UserCheck, label: 'Staff' },
-    { to: '/fees', icon: DollarSign, label: 'Fees' },
-    { to: '/expenditure', icon: Package, label: 'Expenditure' },
-    { to: '/accounts', icon: BarChart3, label: 'Accounts' },
-    { to: '/student-fee-report', icon: FileText, label: 'Student Fee Report' },
-    { to: '/tracking-expenses', icon: TrendingUp, label: 'Tracking Expenses' },
-    { to: '/bus-fee-report', icon: Bus, label: 'Bus Fee Report' },
-    { to: '/student-receipt', icon: Receipt, label: 'Student Receipt' },
-    { to: '/analytics', icon: PieChart, label: 'Analytics' },
+    { to: '/tracking-expenses', icon: TrendingUp, label: 'Track Expenses' },
+    { to: '/income', icon: Banknote, label: 'Income' },
   ],
   teacher: [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },

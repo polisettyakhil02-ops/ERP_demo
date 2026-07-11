@@ -24,6 +24,7 @@ const examScheduleRoutes = require('./routes/examSchedules')
 const staffRoutes = require('./routes/staff')
 const expenditureRoutes = require('./routes/expenditure')
 const incomeRoutes = require('./routes/income')
+const adminRoutes = require('./routes/admin')
 
 const app = express()
 
@@ -70,6 +71,7 @@ app.use('/api/exam-schedules', authMiddleware, examScheduleRoutes)
 app.use('/api/staff', authMiddleware, staffRoutes)
 app.use('/api/expenditure', authMiddleware, expenditureRoutes)
 app.use('/api/income', authMiddleware, incomeRoutes)
+app.use('/api/admin', authMiddleware, adminRoutes)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 

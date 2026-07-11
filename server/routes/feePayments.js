@@ -31,12 +31,18 @@ const updateSchema = feeSchema.partial()
 
 router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => {
   try {
-    const { student_id, academic_year, fee_type, status } = req.query
+    const { student_id, academic_year, fee_type, status, from_date, to_date, branch } = req.query
     const where = {}
     if (student_id) where.student_id = student_id
     if (academic_year) where.academic_year = academic_year
     if (fee_type) where.fee_type = fee_type
     if (status) where.status = status
+    if (branch) where.student = { branch }
+    if (from_date || to_date) {
+      where.payment_date = {}
+      if (from_date) where.payment_date.gte = new Date(from_date)
+      if (to_date) { const d = new Date(to_date); d.setHours(23, 59, 59, 999); where.payment_date.lte = d }
+    }
     const items = await prisma.feePayment.findMany({
       where,
       orderBy: { created_date: 'desc' },
