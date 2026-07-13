@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import * as XLSX from 'xlsx'
 import {
   TrendingUp, TrendingDown, Wallet, Download, Upload, ChevronDown, ChevronUp,
-  RefreshCw, AlertCircle, CheckCircle2, X, Users,
+  RefreshCw, AlertCircle, CheckCircle2, X, Users, FileSpreadsheet,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Legend, Tooltip as RechartTooltip, ResponsiveContainer,
@@ -11,7 +12,7 @@ import TopBar from '@/components/layout/TopBar'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { BRANCHES, INCOME_HEADS, EXPENDITURE_HEADS } from '@/lib/constants'
+import { BRANCHES, INCOME_HEADS, EXPENDITURE_HEADS, PAYMENT_MODES_LIST } from '@/lib/constants'
 
 const todayStr = () => new Date().toISOString().split('T')[0]
 const firstOfMonth = () => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0] }
@@ -61,6 +62,245 @@ function parseCSV(text) {
     return obj
   }).filter(r => Object.values(r).some(v => v.trim()))
   return { headers, rows }
+}
+
+// ── Excel export ───────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function buildAndDownloadXlsx({ selIncHeads, selExpHeads, selModes, feePayments, incomeEntries, expenditureEntries, fromDate, toDate }) {
+  const incHeadSet = new Set(selIncHeads)
+  const expHeadSet = new Set(selExpHeads)
+  const modeSet = new Set(selModes)
+
+  const filteredFees = feePayments.filter(p => incHeadSet.has(p.fee_type) && modeSet.has(p.payment_mode || 'Cash'))
+  const filteredIncome = incomeEntries.filter(i => incHeadSet.has(i.category || i.title))
+  const filteredExp = expenditureEntries.filter(e => expHeadSet.has(e.category))
+
+  const wb = XLSX.utils.book_new()
+
+  // Sheet 1 — Income Ledger
+  const incRows = [
+    ['Date', 'Head', 'Amount (₹)', 'From / Student', 'Payment Mode', 'Receipt No', 'Branch', 'Type'],
+    ...filteredFees.map(p => [
+      fmtDate(p.payment_date), p.fee_type || '', p.amount || 0,
+      p.student_name || '', p.payment_mode || 'Cash', p.receipt_no || '', '', 'Fee Payment',
+    ]),
+    ...filteredIncome.map(i => [
+      fmtDate(i.date), i.category || i.title || '', i.amount || 0,
+      i.received_from || '', i.payment_method || '', '', i.branch || '', 'Income Entry',
+    ]),
+  ]
+  const totalInc = filteredFees.reduce((s, p) => s + (p.amount || 0), 0) +
+    filteredIncome.reduce((s, i) => s + (i.amount || 0), 0)
+  incRows.push(['', 'TOTAL INCOME', totalInc, '', '', '', '', ''])
+
+  const ws1 = XLSX.utils.aoa_to_sheet(incRows)
+  ws1['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 14 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 22 }, { wch: 14 }]
+  XLSX.utils.book_append_sheet(wb, ws1, 'Income Ledger')
+
+  // Sheet 2 — Expenditure Ledger
+  const expRows = [
+    ['Date', 'Head', 'Amount (₹)', 'Description', 'Paid To', 'Approved By', 'Branch'],
+    ...filteredExp.map(e => [
+      fmtDate(e.date), e.category || '', e.amount || 0,
+      e.description || '', e.paid_to || '', e.approved_by || '', e.branch || '',
+    ]),
+  ]
+  const totalExp = filteredExp.reduce((s, e) => s + (e.amount || 0), 0)
+  expRows.push(['', 'TOTAL EXPENDITURE', totalExp, '', '', '', ''])
+
+  const ws2 = XLSX.utils.aoa_to_sheet(expRows)
+  ws2['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 14 }, { wch: 28 }, { wch: 22 }, { wch: 20 }, { wch: 22 }]
+  XLSX.utils.book_append_sheet(wb, ws2, 'Expenditure Ledger')
+
+  // Sheet 3 — Summary
+  const incByHead = {}
+  filteredFees.forEach(p => { const k = p.fee_type || 'Fee'; incByHead[k] = (incByHead[k] || 0) + (p.amount || 0) })
+  filteredIncome.forEach(i => { const k = i.category || i.title || 'Other'; incByHead[k] = (incByHead[k] || 0) + (i.amount || 0) })
+  const expByHead = {}
+  filteredExp.forEach(e => { const k = e.category || 'Other'; expByHead[k] = (expByHead[k] || 0) + (e.amount || 0) })
+
+  const summaryRows = [
+    [`FINANCIAL SUMMARY — ${fromDate} to ${toDate}`],
+    [],
+    ['INCOME BY HEAD', ''],
+    ['Head', 'Amount (₹)'],
+    ...Object.entries(incByHead).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, v]),
+    ['TOTAL INCOME', totalInc],
+    [],
+    ['EXPENDITURE BY HEAD', ''],
+    ['Head', 'Amount (₹)'],
+    ...Object.entries(expByHead).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, v]),
+    ['TOTAL EXPENDITURE', totalExp],
+    [],
+    ['NET BALANCE (Income − Expenditure)', totalInc - totalExp],
+  ]
+  const ws3 = XLSX.utils.aoa_to_sheet(summaryRows)
+  ws3['!cols'] = [{ wch: 42 }, { wch: 16 }]
+  XLSX.utils.book_append_sheet(wb, ws3, 'Summary')
+
+  XLSX.writeFile(wb, `Ledger_${fromDate}_to_${toDate}.xlsx`)
+}
+
+// ── Export panel (modal) ───────────────────────────────────────────────────────
+function ExportPanel({ feePayments, incomeEntries, expenditureEntries, fromDate, toDate, onClose }) {
+  const [selIncHeads, setSelIncHeads] = useState(() => new Set(INCOME_HEADS))
+  const [selExpHeads, setSelExpHeads] = useState(() => new Set(EXPENDITURE_HEADS))
+  const [selModes, setSelModes] = useState(() => new Set(PAYMENT_MODES_LIST))
+  const [includeIncome, setIncludeIncome] = useState(true)
+  const [includeExp, setIncludeExp] = useState(true)
+
+  const toggleItem = (set, setter, item) => {
+    const next = new Set(set)
+    next.has(item) ? next.delete(item) : next.add(item)
+    setter(next)
+  }
+
+  const canDownload = (includeIncome && selIncHeads.size > 0) || (includeExp && selExpHeads.size > 0)
+
+  const handleDownload = () => {
+    buildAndDownloadXlsx({
+      selIncHeads: includeIncome ? [...selIncHeads] : [],
+      selExpHeads: includeExp ? [...selExpHeads] : [],
+      selModes: [...selModes],
+      feePayments,
+      incomeEntries,
+      expenditureEntries,
+      fromDate,
+      toDate,
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+              <FileSpreadsheet size={18} className="text-emerald-600" /> Export to Excel
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">Select heads and modes to include · {fromDate} → {toDate}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Sheet toggles */}
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={includeIncome} onChange={e => setIncludeIncome(e.target.checked)}
+                className="w-4 h-4 rounded accent-emerald-600" />
+              <span className="text-sm font-semibold text-emerald-700">Income Sheet</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={includeExp} onChange={e => setIncludeExp(e.target.checked)}
+                className="w-4 h-4 rounded accent-red-600" />
+              <span className="text-sm font-semibold text-red-700">Expenditure Sheet</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Income Heads */}
+            {includeIncome && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-emerald-700">
+                    Income Heads <span className="text-xs font-normal text-slate-400">({selIncHeads.size}/{INCOME_HEADS.length} selected)</span>
+                  </p>
+                  <div className="flex gap-2 text-xs">
+                    <button onClick={() => setSelIncHeads(new Set(INCOME_HEADS))} className="text-indigo-600 hover:underline">All</button>
+                    <span className="text-slate-300">|</span>
+                    <button onClick={() => setSelIncHeads(new Set())} className="text-slate-500 hover:underline">None</button>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-lg max-h-52 overflow-y-auto p-2 space-y-0.5">
+                  {INCOME_HEADS.map(h => (
+                    <label key={h} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-emerald-50 cursor-pointer select-none">
+                      <input type="checkbox" checked={selIncHeads.has(h)} onChange={() => toggleItem(selIncHeads, setSelIncHeads, h)}
+                        className="w-3.5 h-3.5 accent-emerald-600 shrink-0" />
+                      <span className="text-xs text-slate-600">{h}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Payment modes */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                      Payment Modes <span className="text-slate-400 normal-case font-normal">({selModes.size}/{PAYMENT_MODES_LIST.length})</span>
+                    </p>
+                    <div className="flex gap-2 text-xs">
+                      <button onClick={() => setSelModes(new Set(PAYMENT_MODES_LIST))} className="text-indigo-600 hover:underline">All</button>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={() => setSelModes(new Set())} className="text-slate-500 hover:underline">None</button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PAYMENT_MODES_LIST.map(m => (
+                      <label key={m}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs cursor-pointer select-none transition-all ${selModes.has(m) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>
+                        <input type="checkbox" checked={selModes.has(m)} onChange={() => toggleItem(selModes, setSelModes, m)} className="hidden" />
+                        {m}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Expenditure Heads */}
+            {includeExp && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-red-700">
+                    Expenditure Heads <span className="text-xs font-normal text-slate-400">({selExpHeads.size}/{EXPENDITURE_HEADS.length} selected)</span>
+                  </p>
+                  <div className="flex gap-2 text-xs">
+                    <button onClick={() => setSelExpHeads(new Set(EXPENDITURE_HEADS))} className="text-indigo-600 hover:underline">All</button>
+                    <span className="text-slate-300">|</span>
+                    <button onClick={() => setSelExpHeads(new Set())} className="text-slate-500 hover:underline">None</button>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-lg max-h-[28rem] overflow-y-auto p-2 space-y-0.5">
+                  {EXPENDITURE_HEADS.map(h => (
+                    <label key={h} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-red-50 cursor-pointer select-none">
+                      <input type="checkbox" checked={selExpHeads.has(h)} onChange={() => toggleItem(selExpHeads, setSelExpHeads, h)}
+                        className="w-3.5 h-3.5 accent-red-600 shrink-0" />
+                      <span className="text-xs text-slate-600">{h}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-4">
+          <p className="text-xs text-slate-400">
+            Output: 3 sheets — Income Ledger · Expenditure Ledger · Summary
+          </p>
+          <div className="flex gap-3 shrink-0">
+            <button onClick={onClose}
+              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              Cancel
+            </button>
+            <button onClick={handleDownload} disabled={!canDownload}
+              className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+              <Download size={14} /> Download Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── Collapsible wrapper ────────────────────────────────────────────────────────
@@ -318,6 +558,7 @@ export default function BPTrackingExpenses() {
   const [activityData, setActivityData] = useState([])
   const [loading, setLoading] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
+  const [showExportPanel, setShowExportPanel] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState(null)
 
   const applyFilters = useCallback(async () => {
@@ -363,46 +604,29 @@ export default function BPTrackingExpenses() {
   const totalExpenditure = expenditureEntries.reduce((s, e) => s + (e.amount || 0), 0)
   const netBalance = totalIncome - totalExpenditure
 
-  const exportLedger = () => {
-    const dateLabel = `${fromDate}_to_${toDate}`
-
-    // Income sheet
-    const incomeRows = [
-      ...feePayments.map(p => [
-        formatDate(p.payment_date), p.fee_type, `₹${p.amount}`, p.student_name || '',
-        p.payment_mode || 'Cash', p.receipt_no || '', 'Fee Payment',
-      ]),
-      ...incomeEntries.map(i => [
-        formatDate(i.date), i.category || i.title, `₹${i.amount}`, i.received_from || '',
-        i.payment_method || '', '', 'Income Entry',
-      ]),
-    ]
-    const expRows = expenditureEntries.map(e => [
-      formatDate(e.date), e.category, `₹${e.amount}`, e.description || '',
-      e.paid_to || '', e.approved_by || '', e.branch || '',
-    ])
-
-    downloadCSV(
-      `Income_Ledger_${dateLabel}.csv`,
-      makeCSV(['Date', 'Head', 'Amount', 'From/Student', 'Payment Mode', 'Receipt No', 'Type'], incomeRows),
-    )
-    setTimeout(() => {
-      downloadCSV(
-        `Expenditure_Ledger_${dateLabel}.csv`,
-        makeCSV(['Date', 'Head', 'Amount', 'Description', 'Paid To', 'Approved By', 'Branch'], expRows),
-      )
-    }, 500)
-  }
-
   const sSelect = 'w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
   return (
     <div>
       <TopBar title="Track Expenses" subtitle="Full financial ledger with analytics and bulk tools">
-        <Button variant="outline" onClick={exportLedger} className="gap-2 text-sm">
-          <Download size={14} /> Export Ledger
+        <Button
+          onClick={() => setShowExportPanel(true)}
+          className="gap-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          <FileSpreadsheet size={14} /> Export Excel
         </Button>
       </TopBar>
+
+      {showExportPanel && (
+        <ExportPanel
+          feePayments={feePayments}
+          incomeEntries={incomeEntries}
+          expenditureEntries={expenditureEntries}
+          fromDate={fromDate}
+          toDate={toDate}
+          onClose={() => setShowExportPanel(false)}
+        />
+      )}
 
       <div className="page-content">
         {/* Filter bar */}
