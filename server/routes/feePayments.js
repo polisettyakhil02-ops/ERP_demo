@@ -1,0 +1,79 @@
+const express = require('express')
+const { z } = require('zod')
+const paginate = require('../lib/paginate')
+
+const prisma = require('../lib/prisma')
+const validate = require('../lib/validate')
+const { requireRole } = require('../middleware/auth')
+
+const router = express.Router()
+
+const PAYMENT_MODES = ['Cash', 'Cheque', 'Swipe machine', 'Paytm', 'GooglePay', 'PhonePay', 'OnlineTransfer', 'Others', 'Online', 'DD', 'Card']
+
+const feeSchema = z.object({
+  student_id: z.string().uuid(),
+  academic_year: z.string().min(1),
+  fee_type: z.string().min(1),
+  amount: z.number().nonnegative(),
+  student_name: z.string().optional(),
+  payment_date: z.string().optional().transform(v => v ? new Date(v) : undefined),
+  payment_mode: z.enum(PAYMENT_MODES).optional(),
+  receipt_no: z.string().optional(),
+  status: z.enum(['Paid', 'Pending', 'Partial', 'Cancelled']).optional(),
+  voucher_type: z.string().optional(),
+  transaction_no: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_branch: z.string().optional(),
+  cheque_date: z.string().optional().transform(v => v ? new Date(v) : undefined),
+})
+
+const updateSchema = feeSchema.partial()
+
+router.get('/', requireRole('finance', 'consultant'), async (req, res, next) => {
+  try {
+    const { student_id, academic_year, fee_type, status, from_date, to_date, branch } = req.query
+    const where = {}
+    if (student_id) where.student_id = student_id
+    if (academic_year) where.academic_year = academic_year
+    if (fee_type) where.fee_type = fee_type
+    if (status) where.status = status
+    if (branch) where.student = { branch }
+    if (from_date || to_date) {
+      where.payment_date = {}
+      if (from_date) where.payment_date.gte = new Date(from_date)
+      if (to_date) { const d = new Date(to_date); d.setHours(23, 59, 59, 999); where.payment_date.lte = d }
+    }
+    const items = await prisma.feePayment.findMany({
+      where,
+      orderBy: { created_date: 'desc' },
+      ...paginate(req.query),
+    })
+    res.json(items)
+  } catch (err) { next(err) }
+})
+
+router.post('/', requireRole('finance', 'consultant'), validate(feeSchema), async (req, res, next) => {
+  try {
+    const data = { ...req.body, created_by: req.user.id }
+    if (!data.receipt_no) data.receipt_no = `MV${Date.now().toString().slice(-8)}`
+    const item = await prisma.feePayment.create({ data })
+    res.status(201).json(item)
+  } catch (err) { next(err) }
+})
+
+router.put('/:id', requireRole('finance', 'consultant'), validate(updateSchema), async (req, res, next) => {
+  try {
+    const { id, created_date, updated_date, student, ...data } = req.body
+    const item = await prisma.feePayment.update({ where: { id: req.params.id }, data: { ...data, updated_by: req.user.id } })
+    res.json(item)
+  } catch (err) { next(err) }
+})
+
+router.delete('/:id', requireRole('finance'), async (req, res, next) => {
+  try {
+    await prisma.feePayment.delete({ where: { id: req.params.id } })
+    res.json({ success: true })
+  } catch (err) { next(err) }
+})
+
+module.exports = router
