@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ExternalLink, Globe, Database, Cpu } from 'lucide-react'
+import { ExternalLink, Globe, Database, Cpu, Monitor } from 'lucide-react'
 import SectionHeader from '@/components/ui/SectionHeader'
 import { containerVariants, fadeUpVariants, cardHover, viewportConfig } from '@/lib/motion'
 
@@ -10,7 +10,7 @@ interface Client {
   name: string
   shortName: string
   service: string
-  serviceType: 'web' | 'erp' | 'hardware'
+  serviceType: 'web' | 'erp' | 'hardware' | 'digitalboard'
   location: string
   href: string
   color: string
@@ -73,24 +73,38 @@ const CLIENTS: Client[] = [
     color: '#fb923c',
     bg: 'rgba(251, 146, 60, 0.10)',
   },
+  {
+    initials: 'SH',
+    name: 'Sacred Heart Convent School',
+    shortName: 'Sacred Heart School',
+    service: 'Vision Digital Boards',
+    serviceType: 'digitalboard',
+    location: 'Andhra Pradesh, India',
+    href: 'https://ap106cisce.org/index.php',
+    color: '#e879f9',
+    bg: 'rgba(232, 121, 249, 0.10)',
+  },
 ]
 
 const SERVICE_ICONS = {
   web: Globe,
   erp: Database,
   hardware: Cpu,
+  digitalboard: Monitor,
 }
 
 const SERVICE_COLORS = {
   web: 'rgba(96, 165, 250, 0.12)',
   erp: 'rgba(181, 145, 90, 0.12)',
   hardware: 'rgba(52, 211, 153, 0.12)',
+  digitalboard: 'rgba(232, 121, 249, 0.12)',
 }
 
 const SERVICE_TEXT_COLORS = {
   web: '#60a5fa',
   erp: '#b5915a',
   hardware: '#34d399',
+  digitalboard: '#e879f9',
 }
 
 export default function ClientsSection() {
