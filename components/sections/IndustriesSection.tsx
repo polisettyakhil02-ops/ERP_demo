@@ -75,7 +75,7 @@ const INDUSTRIES: Industry[] = [
 
 export default function IndustriesSection() {
   return (
-    <section id="industries" className="section-padding bg-[#111111] relative overflow-hidden">
+    <section id="industries" className="section-padding bg-[#f5f5f5] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -103,13 +103,13 @@ export default function IndustriesSection() {
               key={industry.title}
               variants={fadeUpVariants}
               className="industry-card glass-card p-6 group cursor-default"
-              style={{ background: 'rgba(255,255,255,0.025)' }}
+              style={{ background: 'rgba(0,0,0,0.025)' }}
             >
               <div className="w-11 h-11 rounded-xl bg-[#b5915a]/10 flex items-center justify-center mb-4 group-hover:bg-[#b5915a]/15 transition-colors duration-300">
                 <industry.icon className="w-5 h-5 text-[#b5915a]" />
               </div>
-              <h3 className="text-white font-semibold text-base mb-2">{industry.title}</h3>
-              <p className="text-[#505050] text-sm leading-relaxed mb-4">{industry.description}</p>
+              <h3 className="text-[#0a0a0a] font-semibold text-base mb-2">{industry.title}</h3>
+              <p className="text-[#777777] text-sm leading-relaxed mb-4">{industry.description}</p>
               <span className="text-xs text-[#b5915a]/70 font-medium">{industry.count}</span>
             </motion.div>
           ))}

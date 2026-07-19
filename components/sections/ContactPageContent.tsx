@@ -60,7 +60,7 @@ export default function ContactPageContent() {
   )
 
   return (
-    <div className="bg-[#0a0a0a] pt-24">
+    <div className="bg-white pt-24">
       {/* Hero banner */}
       <section className="relative py-20 overflow-hidden">
         <div
@@ -91,7 +91,7 @@ export default function ContactPageContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
-            className="text-lg text-[#606060] max-w-2xl mx-auto leading-relaxed"
+            className="text-lg text-[#666666] max-w-2xl mx-auto leading-relaxed"
           >
             Tell us what you need and we&rsquo;ll connect with you directly — via WhatsApp or email, whichever suits you best.
           </motion.p>
@@ -99,7 +99,7 @@ export default function ContactPageContent() {
       </section>
 
       {/* Main grid */}
-      <section className="section-padding border-t border-white/5">
+      <section className="section-padding border-t border-black/[0.07]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
 
@@ -112,8 +112,8 @@ export default function ContactPageContent() {
               className="lg:col-span-2 space-y-5"
             >
               <div>
-                <h2 className="text-white font-bold text-2xl mb-2">Dominare Tech Pvt Ltd</h2>
-                <p className="text-[#606060] text-sm leading-relaxed">
+                <h2 className="text-[#0a0a0a] font-bold text-2xl mb-2">Dominare Tech Pvt Ltd</h2>
+                <p className="text-[#666666] text-sm leading-relaxed">
                   Based in Hyderabad, serving clients across India and internationally. Fill the form and we&rsquo;ll reach out within one business day.
                 </p>
               </div>
@@ -125,13 +125,13 @@ export default function ContactPageContent() {
                       <Icon className="w-5 h-5 text-[#b5915a]" />
                     </div>
                     <div>
-                      <div className="text-[#505050] text-xs uppercase tracking-wider mb-1">{label}</div>
+                      <div className="text-[#777777] text-xs uppercase tracking-wider mb-1">{label}</div>
                       {href ? (
-                        <a href={href} className="text-[#c0c0c0] text-sm hover:text-white transition-colors">
+                        <a href={href} className="text-[#3a3a3a] text-sm hover:text-[#0a0a0a] transition-colors">
                           {value}
                         </a>
                       ) : (
-                        <p className="text-[#c0c0c0] text-sm leading-relaxed">{value}</p>
+                        <p className="text-[#3a3a3a] text-sm leading-relaxed">{value}</p>
                       )}
                     </div>
                   </div>
@@ -148,8 +148,8 @@ export default function ContactPageContent() {
                     <Linkedin className="w-5 h-5 text-[#b5915a]" />
                   </div>
                   <div>
-                    <div className="text-[#505050] text-xs uppercase tracking-wider mb-1">LinkedIn</div>
-                    <span className="text-[#c0c0c0] text-sm group-hover:text-white transition-colors">
+                    <div className="text-[#777777] text-xs uppercase tracking-wider mb-1">LinkedIn</div>
+                    <span className="text-[#3a3a3a] text-sm group-hover:text-[#0a0a0a] transition-colors">
                       Dominare Tech
                     </span>
                   </div>
@@ -179,13 +179,13 @@ export default function ContactPageContent() {
                       className="space-y-6"
                     >
                       <div>
-                        <h3 className="text-white font-bold text-lg mb-1">Send an Enquiry</h3>
-                        <p className="text-[#505050] text-sm">We&rsquo;ll direct your message to the right team.</p>
+                        <h3 className="text-[#0a0a0a] font-bold text-lg mb-1">Send an Enquiry</h3>
+                        <p className="text-[#777777] text-sm">We&rsquo;ll direct your message to the right team.</p>
                       </div>
 
                       {/* Full name */}
                       <div>
-                        <label className="block text-[#606060] text-xs uppercase tracking-wider mb-2">
+                        <label className="block text-[#666666] text-xs uppercase tracking-wider mb-2">
                           Full Name <span className="text-[#b5915a]">*</span>
                         </label>
                         <input
@@ -199,7 +199,7 @@ export default function ContactPageContent() {
 
                       {/* Purpose dropdown */}
                       <div>
-                        <label className="block text-[#606060] text-xs uppercase tracking-wider mb-2">
+                        <label className="block text-[#666666] text-xs uppercase tracking-wider mb-2">
                           Purpose of Contact <span className="text-[#b5915a]">*</span>
                         </label>
                         <div className="relative">
@@ -221,7 +221,7 @@ export default function ContactPageContent() {
                               </option>
                             ))}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#505050] pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777] pointer-events-none" />
                         </div>
                       </div>
 
@@ -232,7 +232,7 @@ export default function ContactPageContent() {
                         Continue →
                       </button>
 
-                      <p className="text-[#404040] text-xs text-center">
+                      <p className="text-[#999999] text-xs text-center">
                         By submitting you agree to be contacted by Dominare Tech via WhatsApp or email.
                       </p>
                     </motion.form>
@@ -249,16 +249,16 @@ export default function ContactPageContent() {
                       {/* Summary pill */}
                       <div className="flex items-center gap-3 p-4 rounded-xl bg-[#b5915a]/8 border border-[#b5915a]/20">
                         <div className="w-2 h-2 rounded-full bg-[#b5915a] flex-shrink-0" />
-                        <p className="text-sm text-[#c0c0c0]">
-                          <span className="text-white font-semibold">{name}</span>
+                        <p className="text-sm text-[#3a3a3a]">
+                          <span className="text-[#0a0a0a] font-semibold">{name}</span>
                           &nbsp;&mdash;&nbsp;enquiry about&nbsp;
                           <span className="text-[#b5915a] font-semibold">{purpose}</span>
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-white font-bold text-lg mb-1">Choose how to reach us</h3>
-                        <p className="text-[#505050] text-sm">
+                        <h3 className="text-[#0a0a0a] font-bold text-lg mb-1">Choose how to reach us</h3>
+                        <p className="text-[#777777] text-sm">
                           Both options will pre-fill your enquiry details so you don&rsquo;t have to repeat yourself.
                         </p>
                       </div>
@@ -268,14 +268,14 @@ export default function ContactPageContent() {
                         href={`https://wa.me/918688361839?text=${waMessage}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-5 p-6 rounded-2xl border border-white/8 bg-white/[0.02] hover:border-[#25D366]/30 hover:bg-[#25D366]/5 transition-all duration-200 group"
+                        className="flex items-center gap-5 p-6 rounded-2xl border border-black/[0.09] bg-white/[0.02] hover:border-[#25D366]/30 hover:bg-[#25D366]/5 transition-all duration-200 group"
                       >
                         <div className="w-12 h-12 rounded-xl bg-[#25D366]/15 flex items-center justify-center flex-shrink-0">
                           <MessageCircle className="w-6 h-6 text-[#25D366]" />
                         </div>
                         <div className="flex-1">
-                          <div className="text-white font-semibold text-sm mb-0.5">WhatsApp</div>
-                          <div className="text-[#505050] text-xs">+91 86883 61839 — instant reply during business hours</div>
+                          <div className="text-[#0a0a0a] font-semibold text-sm mb-0.5">WhatsApp</div>
+                          <div className="text-[#777777] text-xs">+91 86883 61839 — instant reply during business hours</div>
                         </div>
                         <span className="text-[#25D366] text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                           Open →
@@ -285,14 +285,14 @@ export default function ContactPageContent() {
                       {/* Email */}
                       <a
                         href={`mailto:support@dominaretech.com?subject=${mailSubject}&body=${mailBody}`}
-                        className="flex items-center gap-5 p-6 rounded-2xl border border-white/8 bg-white/[0.02] hover:border-[#b5915a]/30 hover:bg-[#b5915a]/5 transition-all duration-200 group"
+                        className="flex items-center gap-5 p-6 rounded-2xl border border-black/[0.09] bg-white/[0.02] hover:border-[#b5915a]/30 hover:bg-[#b5915a]/5 transition-all duration-200 group"
                       >
                         <div className="w-12 h-12 rounded-xl bg-[#b5915a]/10 flex items-center justify-center flex-shrink-0">
                           <Mail className="w-6 h-6 text-[#b5915a]" />
                         </div>
                         <div className="flex-1">
-                          <div className="text-white font-semibold text-sm mb-0.5">Email</div>
-                          <div className="text-[#505050] text-xs">support@dominaretech.com — response within 1 business day</div>
+                          <div className="text-[#0a0a0a] font-semibold text-sm mb-0.5">Email</div>
+                          <div className="text-[#777777] text-xs">support@dominaretech.com — response within 1 business day</div>
                         </div>
                         <span className="text-[#b5915a] text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                           Open →
@@ -301,7 +301,7 @@ export default function ContactPageContent() {
 
                       <button
                         onClick={() => { setSubmitted(false); setName(''); setPurpose('') }}
-                        className="text-[#505050] hover:text-white text-xs transition-colors w-full text-center pt-2"
+                        className="text-[#777777] hover:text-[#0a0a0a] text-xs transition-colors w-full text-center pt-2"
                       >
                         ← Start over
                       </button>
@@ -319,7 +319,7 @@ export default function ContactPageContent() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="glass-card aspect-video flex flex-col items-center justify-center gap-3 text-center">
             <MapPin className="w-8 h-8 text-[#b5915a]" />
-            <p className="text-[#505050] text-sm">Somajiguda, Hyderabad, Telangana – 500082</p>
+            <p className="text-[#777777] text-sm">Somajiguda, Hyderabad, Telangana – 500082</p>
             <a
               href="https://maps.google.com/?q=Somajiguda,Hyderabad"
               target="_blank"

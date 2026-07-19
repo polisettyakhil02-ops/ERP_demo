@@ -33,7 +33,7 @@ const SOCIAL = [
 
 export default function Footer() {
   return (
-    <footer className="bg-[#050505] border-t border-white/5">
+    <footer className="bg-[#ebebeb] border-t border-black/[0.07]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <motion.div
           variants={containerVariants}
@@ -49,11 +49,11 @@ export default function Footer() {
                 <span className="text-[#0a0a0a] font-black text-sm">D</span>
               </div>
               <div className="leading-tight">
-                <span className="text-white font-black text-base tracking-tight">Dominare</span>
-                <span className="text-[#a0a0a0] font-medium text-base tracking-tight"> Tech Pvt Ltd</span>
+                <span className="text-[#0a0a0a] font-black text-base tracking-tight">Dominare</span>
+                <span className="text-[#555555] font-medium text-base tracking-tight"> Tech Pvt Ltd</span>
               </div>
             </Link>
-            <p className="text-[#505050] text-sm leading-relaxed mb-6">
+            <p className="text-[#777777] text-sm leading-relaxed mb-6">
               Engineering tomorrow. Delivering custom software, enterprise solutions, and infrastructure that powers growing businesses across India and the world.
             </p>
             <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function Footer() {
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-9 h-9 rounded-full glass-card flex items-center justify-center text-[#505050] hover:text-[#b5915a] hover:border-[#b5915a]/40 transition-all duration-200"
+                  className="w-9 h-9 rounded-full glass-card flex items-center justify-center text-[#777777] hover:text-[#b5915a] hover:border-[#b5915a]/40 transition-all duration-200"
                 >
                   <Icon className="w-4 h-4" />
                 </a>
@@ -78,7 +78,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1.5 text-[#505050] hover:text-white text-sm transition-colors duration-200"
+                    className="group flex items-center gap-1.5 text-[#777777] hover:text-[#0a0a0a] text-sm transition-colors duration-200"
                   >
                     <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 text-[#b5915a] -ml-1 transition-all duration-200 group-hover:translate-x-0.5" />
                     {link.label}
@@ -96,7 +96,7 @@ export default function Footer() {
                 <li key={s}>
                   <Link
                     href="/#services"
-                    className="group flex items-center gap-1.5 text-[#505050] hover:text-white text-sm transition-colors duration-200"
+                    className="group flex items-center gap-1.5 text-[#777777] hover:text-[#0a0a0a] text-sm transition-colors duration-200"
                   >
                     <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 text-[#b5915a] -ml-1 transition-all duration-200 group-hover:translate-x-0.5" />
                     {s}
@@ -112,7 +112,7 @@ export default function Footer() {
             <ul className="space-y-4 mt-3">
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-[#b5915a] flex-shrink-0 mt-0.5" />
-                <span className="text-[#505050] text-sm leading-relaxed">
+                <span className="text-[#777777] text-sm leading-relaxed">
                   H. No. 6-3-1093/406, V V Vintage Boulevard,<br />
                   Somajiguda, Hyderabad,<br />
                   Telangana – 500082
@@ -120,13 +120,13 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#b5915a] flex-shrink-0" />
-                <a href="tel:+918688361839" className="text-[#505050] hover:text-white text-sm transition-colors">
+                <a href="tel:+918688361839" className="text-[#777777] hover:text-[#0a0a0a] text-sm transition-colors">
                   +91 86883 61839
                 </a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#b5915a] flex-shrink-0" />
-                <a href="mailto:support@dominaretech.com" className="text-[#505050] hover:text-white text-sm transition-colors">
+                <a href="mailto:support@dominaretech.com" className="text-[#777777] hover:text-[#0a0a0a] text-sm transition-colors">
                   support@dominaretech.com
                 </a>
               </li>
@@ -135,7 +135,7 @@ export default function Footer() {
         </motion.div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="border-t border-black/[0.07] py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-[#353535] text-sm">
             &copy; {new Date().getFullYear()} Dominare Tech Pvt Ltd. All rights reserved.
           </p>

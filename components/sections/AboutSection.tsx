@@ -31,7 +31,7 @@ const VALUES = [
 
 export default function AboutSection() {
   return (
-    <section id="about" className="section-padding bg-[#0a0a0a] relative overflow-hidden">
+    <section id="about" className="section-padding bg-white relative overflow-hidden">
       {/* Subtle background gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -64,10 +64,10 @@ export default function AboutSection() {
             <h2 className="section-title mb-6">
               Pioneering the Future of Enterprise Technology
             </h2>
-            <p className="text-[#606060] leading-relaxed mb-6 text-base">
+            <p className="text-[#666666] leading-relaxed mb-6 text-base">
               Founded on the belief that technology should be a force multiplier for human ambition, Dominare Tech Group has grown into a leading enterprise solutions provider trusted by organisations across industries and continents.
             </p>
-            <p className="text-[#606060] leading-relaxed mb-10 text-base">
+            <p className="text-[#666666] leading-relaxed mb-10 text-base">
               We combine deep technical expertise with strategic thinking to deliver solutions that don&rsquo;t just solve today&rsquo;s problems — they build the foundation for tomorrow&rsquo;s opportunities. Every engagement is a partnership built on transparency, expertise, and a shared commitment to results.
             </p>
 
@@ -79,8 +79,8 @@ export default function AboutSection() {
                     <Icon className="w-5 h-5 text-[#b5915a]" />
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold text-sm mb-1">{label}</h4>
-                    <p className="text-[#606060] text-sm leading-relaxed">{text}</p>
+                    <h4 className="text-[#0a0a0a] font-semibold text-sm mb-1">{label}</h4>
+                    <p className="text-[#666666] text-sm leading-relaxed">{text}</p>
                   </div>
                 </div>
               ))}
@@ -105,15 +105,15 @@ export default function AboutSection() {
                   transition={{ delay: i * 0.1 }}
                   className="glass-card p-8 text-center"
                 >
-                  <div className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">
+                  <div className="text-4xl md:text-5xl font-black text-[#0a0a0a] mb-2 tracking-tight">
                     {stat.target != null ? (
                       <AnimatedCounter target={stat.target} suffix={stat.suffix ?? ''} duration={2200} />
                     ) : (
                       stat.static
                     )}
                   </div>
-                  <div className="text-white font-semibold text-sm mb-1">{stat.label}</div>
-                  <div className="text-[#505050] text-xs">{stat.description}</div>
+                  <div className="text-[#0a0a0a] font-semibold text-sm mb-1">{stat.label}</div>
+                  <div className="text-[#777777] text-xs">{stat.description}</div>
                 </motion.div>
               ))}
             </div>
@@ -126,7 +126,7 @@ export default function AboutSection() {
               viewport={viewportConfig}
               className="mt-6 glass-card p-6"
             >
-              <p className="text-[#a0a0a0] text-xs font-semibold uppercase tracking-widest mb-4">Core Values</p>
+              <p className="text-[#555555] text-xs font-semibold uppercase tracking-widest mb-4">Core Values</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   'Client-First Thinking',
@@ -138,7 +138,7 @@ export default function AboutSection() {
                 ].map((value) => (
                   <motion.div key={value} variants={fadeUpVariants} className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-[#b5915a] flex-shrink-0" />
-                    <span className="text-[#a0a0a0] text-sm">{value}</span>
+                    <span className="text-[#555555] text-sm">{value}</span>
                   </motion.div>
                 ))}
               </div>

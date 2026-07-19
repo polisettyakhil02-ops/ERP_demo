@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 export default function HiveErpPlaceholder() {
   return (
-    <div className="bg-[#0a0a0a] min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
+    <div className="bg-white min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
       {/* Subtle radial glow */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -52,7 +52,7 @@ export default function HiveErpPlaceholder() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="text-[#606060] text-lg leading-relaxed mb-10"
+          className="text-[#666666] text-lg leading-relaxed mb-10"
         >
           A purpose-built school management platform covering admissions, fees, attendance, timetables, parent communication, and more — all in one place.
         </motion.p>
@@ -65,7 +65,7 @@ export default function HiveErpPlaceholder() {
           className="inline-flex items-center gap-2 glass-card px-5 py-2.5 mb-10"
         >
           <span className="w-2 h-2 rounded-full bg-[#b5915a] animate-pulse" />
-          <span className="text-[#a0a0a0] text-sm">Full product page coming soon</span>
+          <span className="text-[#555555] text-sm">Full product page coming soon</span>
         </motion.div>
 
         {/* CTA row */}
@@ -80,7 +80,7 @@ export default function HiveErpPlaceholder() {
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-[#606060] hover:text-white transition-colors text-sm"
+            className="inline-flex items-center gap-2 text-[#666666] hover:text-[#0a0a0a] transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to home

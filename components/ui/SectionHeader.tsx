@@ -37,7 +37,7 @@ export default function SectionHeader({
       {subtitle && (
         <motion.p
           variants={fadeUpVariants}
-          className={`text-lg text-[#a0a0a0] leading-relaxed max-w-2xl ${centered ? 'mx-auto' : ''}`}
+          className={`text-lg text-[#555555] leading-relaxed max-w-2xl ${centered ? 'mx-auto' : ''}`}
         >
           {subtitle}
         </motion.p>

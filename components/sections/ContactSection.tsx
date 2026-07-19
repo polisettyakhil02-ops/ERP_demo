@@ -53,7 +53,7 @@ export default function ContactSection() {
   }
 
   return (
-    <section id="contact" className="section-padding bg-[#111111] relative overflow-hidden">
+    <section id="contact" className="section-padding bg-[#f5f5f5] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -84,13 +84,13 @@ export default function ContactSection() {
                   <Icon className="w-5 h-5 text-[#b5915a]" />
                 </div>
                 <div>
-                  <p className="text-[#505050] text-xs font-medium uppercase tracking-wider mb-1">{label}</p>
+                  <p className="text-[#777777] text-xs font-medium uppercase tracking-wider mb-1">{label}</p>
                   {href ? (
-                    <a href={href} className="text-[#a0a0a0] text-sm hover:text-white transition-colors whitespace-pre-line leading-relaxed">
+                    <a href={href} className="text-[#555555] text-sm hover:text-[#0a0a0a] transition-colors whitespace-pre-line leading-relaxed">
                       {value}
                     </a>
                   ) : (
-                    <p className="text-[#a0a0a0] text-sm whitespace-pre-line leading-relaxed">{value}</p>
+                    <p className="text-[#555555] text-sm whitespace-pre-line leading-relaxed">{value}</p>
                   )}
                 </div>
               </div>
@@ -98,7 +98,7 @@ export default function ContactSection() {
 
             {/* CTA note */}
             <div className="glass-card p-5 border-[#b5915a]/20" style={{ borderColor: 'rgba(181,145,90,0.2)' }}>
-              <p className="text-[#606060] text-sm leading-relaxed">
+              <p className="text-[#666666] text-sm leading-relaxed">
                 <span className="text-[#b5915a] font-semibold">Enterprise inquiries</span> typically receive a response within 4 business hours. For urgent matters, please call our direct line.
               </p>
               <button
@@ -132,8 +132,8 @@ export default function ContactSection() {
                     <div className="w-16 h-16 rounded-full bg-[#b5915a]/15 flex items-center justify-center">
                       <CheckCircle2 className="w-8 h-8 text-[#b5915a]" />
                     </div>
-                    <h3 className="text-xl font-bold text-white">Message Sent</h3>
-                    <p className="text-[#606060] text-sm max-w-xs">
+                    <h3 className="text-xl font-bold text-[#0a0a0a]">Message Sent</h3>
+                    <p className="text-[#666666] text-sm max-w-xs">
                       Thank you for reaching out. Our enterprise team will be in touch within 4 business hours.
                     </p>
                     <button onClick={handleReset} className="btn-outline mt-4 py-2.5 px-6 text-sm">
@@ -151,7 +151,7 @@ export default function ContactSection() {
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[#505050] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="name">
+                        <label className="block text-[#777777] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="name">
                           Full Name *
                         </label>
                         <input
@@ -166,7 +166,7 @@ export default function ContactSection() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[#505050] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="email">
+                        <label className="block text-[#777777] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="email">
                           Email Address *
                         </label>
                         <input
@@ -184,7 +184,7 @@ export default function ContactSection() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[#505050] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="company">
+                        <label className="block text-[#777777] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="company">
                           Company *
                         </label>
                         <input
@@ -199,7 +199,7 @@ export default function ContactSection() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[#505050] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="phone">
+                        <label className="block text-[#777777] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="phone">
                           Phone Number
                         </label>
                         <input
@@ -215,7 +215,7 @@ export default function ContactSection() {
                     </div>
 
                     <div>
-                      <label className="block text-[#505050] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="message">
+                      <label className="block text-[#777777] text-xs font-medium uppercase tracking-wider mb-2" htmlFor="message">
                         Message *
                       </label>
                       <textarea
@@ -248,7 +248,7 @@ export default function ContactSection() {
                       )}
                     </button>
 
-                    <p className="text-[#404040] text-xs text-center">
+                    <p className="text-[#999999] text-xs text-center">
                       By submitting, you agree to our privacy policy. We&rsquo;ll never share your details.
                     </p>
                   </motion.form>
@@ -272,7 +272,7 @@ export default function ContactSection() {
               <MapPin className="w-6 h-6 text-[#b5915a]" />
             </div>
             <div className="text-center">
-              <p className="text-[#303030] text-sm font-medium">Interactive Map</p>
+              <p className="text-[#aaaaaa] text-sm font-medium">Interactive Map</p>
               <p className="text-[#252525] text-xs mt-0.5">100 Enterprise Way, Tech District, New York, NY 10001</p>
             </div>
           </div>

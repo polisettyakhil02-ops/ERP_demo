@@ -41,7 +41,7 @@ function GradientMesh() {
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] rounded-full"
         style={{
-          background: 'radial-gradient(circle at center, rgba(255, 255, 255, 0.025) 0%, transparent 70%)',
+          background: 'radial-gradient(circle at center, rgba(0, 0, 0, 0.015) 0%, transparent 70%)',
           filter: 'blur(40px)',
           animation: 'gradientShift3 14s ease-in-out infinite',
           willChange: 'transform',
@@ -51,7 +51,7 @@ function GradientMesh() {
       <div
         className="absolute inset-0 opacity-[0.015]"
         style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)`,
           backgroundSize: '80px 80px',
         }}
       />
@@ -112,7 +112,7 @@ export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0a]"
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-white"
     >
       <GradientMesh />
       <FloatingParticles particles={particles} />
@@ -124,12 +124,12 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="inline-flex items-center gap-2.5 glass-card px-5 py-2.5 mb-8 text-sm text-[#a0a0a0]"
+          className="inline-flex items-center gap-2.5 glass-card px-5 py-2.5 mb-8 text-sm text-[#555555]"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#b5915a]" style={{ animation: 'dotPulse 2s ease-in-out infinite' }} />
           Enterprise Technology Solutions
-          <span className="w-px h-3.5 bg-white/10" />
-          <span className="text-[#606060]">Est. 2018</span>
+          <span className="w-px h-3.5 bg-black/10" />
+          <span className="text-[#666666]">Est. 2018</span>
         </motion.div>
 
         {/* Main headline */}
@@ -142,7 +142,7 @@ export default function HeroSection() {
         >
           Engineering Tomorrow.
           <br />
-          <span className="text-[#e0e0e0]">Building Intelligent</span>
+          <span className="text-[#2a2a2a]">Building Intelligent</span>
           <br />
           Digital Enterprises.
         </motion.h1>
@@ -152,7 +152,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.55 }}
-          className="text-lg md:text-xl text-[#606060] max-w-2xl mx-auto mb-12 leading-relaxed"
+          className="text-lg md:text-xl text-[#666666] max-w-2xl mx-auto mb-12 leading-relaxed"
         >
           Dominare Tech Group delivers enterprise software, AI, automation, cloud infrastructure and digital transformation solutions that help organisations innovate faster and scale globally.
         </motion.p>
@@ -185,10 +185,10 @@ export default function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 1 }}
-          className="mt-16 pt-8 border-t border-white/5"
+          className="mt-16 pt-8 border-t border-black/[0.07]"
         >
-          <p className="text-xs text-[#404040] uppercase tracking-widest mb-4">Trusted by enterprises across</p>
-          <div className="flex flex-wrap justify-center gap-6 text-[#303030] text-sm font-medium">
+          <p className="text-xs text-[#999999] uppercase tracking-widest mb-4">Trusted by enterprises across</p>
+          <div className="flex flex-wrap justify-center gap-6 text-[#aaaaaa] text-sm font-medium">
             {['Healthcare', 'Finance', 'Manufacturing', 'Logistics', 'Government', 'Retail'].map((industry) => (
               <span key={industry}>{industry}</span>
             ))}
@@ -204,7 +204,7 @@ export default function HeroSection() {
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer"
         onClick={() => handleScroll('#about')}
       >
-        <span className="text-[#404040] text-xs tracking-widest uppercase">Scroll</span>
+        <span className="text-[#999999] text-xs tracking-widest uppercase">Scroll</span>
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}

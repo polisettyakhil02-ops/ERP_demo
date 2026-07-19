@@ -114,7 +114,7 @@ const PRODUCTS: Product[] = [
 
 export default function ProductsSection() {
   return (
-    <section id="products" className="section-padding bg-[#111111] relative overflow-hidden">
+    <section id="products" className="section-padding bg-[#f5f5f5] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -144,7 +144,7 @@ export default function ProductsSection() {
               whileHover={cardHover}
               whileTap={cardTap}
               className="glass-card p-7 group cursor-default flex flex-col"
-              style={{ background: 'rgba(255,255,255,0.025)' }}
+              style={{ background: 'rgba(0,0,0,0.025)' }}
             >
               {/* Icon */}
               <div
@@ -155,10 +155,10 @@ export default function ProductsSection() {
               </div>
 
               {/* Name + tagline */}
-              <h3 className="text-xl font-bold text-white mb-0.5">{product.name}</h3>
+              <h3 className="text-xl font-bold text-[#0a0a0a] mb-0.5">{product.name}</h3>
               <p className="text-xs font-medium text-[#b5915a] mb-3 uppercase tracking-wider">{product.tagline}</p>
 
-              <p className="text-[#606060] text-sm leading-relaxed mb-5">{product.description}</p>
+              <p className="text-[#666666] text-sm leading-relaxed mb-5">{product.description}</p>
 
               {/* Features */}
               <ul className="space-y-2.5 mb-6 flex-1">

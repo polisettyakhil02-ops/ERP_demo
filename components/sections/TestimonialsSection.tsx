@@ -82,7 +82,7 @@ export default function TestimonialsSection() {
   const active = TESTIMONIALS[current]
 
   return (
-    <section id="testimonials" className="section-padding bg-[#111111] relative overflow-hidden">
+    <section id="testimonials" className="section-padding bg-[#f5f5f5] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -113,7 +113,7 @@ export default function TestimonialsSection() {
                 exit={{ opacity: 0, x: direction > 0 ? -80 : 80 }}
                 transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="w-full glass-card p-8 md:p-12 text-center"
-                style={{ background: 'rgba(255,255,255,0.03)' }}
+                style={{ background: 'rgba(0,0,0,0.03)' }}
               >
                 {/* Quote icon */}
                 <div
@@ -124,7 +124,7 @@ export default function TestimonialsSection() {
                 </div>
 
                 {/* Quote text */}
-                <blockquote className="text-lg md:text-xl text-[#c0c0c0] leading-relaxed mb-8 font-light italic max-w-3xl mx-auto">
+                <blockquote className="text-lg md:text-xl text-[#3a3a3a] leading-relaxed mb-8 font-light italic max-w-3xl mx-auto">
                   &ldquo;{active.quote}&rdquo;
                 </blockquote>
 
@@ -141,8 +141,8 @@ export default function TestimonialsSection() {
                     {active.initials}
                   </div>
                   <div>
-                    <div className="text-white font-semibold text-base">{active.author}</div>
-                    <div className="text-[#606060] text-sm mt-0.5">{active.title}</div>
+                    <div className="text-[#0a0a0a] font-semibold text-base">{active.author}</div>
+                    <div className="text-[#666666] text-sm mt-0.5">{active.title}</div>
                     <div className="text-[#b5915a] text-xs font-semibold uppercase tracking-wider mt-1">{active.company}</div>
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export default function TestimonialsSection() {
             {/* Prev button */}
             <button
               onClick={prev}
-              className="w-10 h-10 rounded-full glass-card flex items-center justify-center text-[#606060] hover:text-white hover:border-[#b5915a]/40 transition-all duration-200"
+              className="w-10 h-10 rounded-full glass-card flex items-center justify-center text-[#666666] hover:text-[#0a0a0a] hover:border-[#b5915a]/40 transition-all duration-200"
               aria-label="Previous testimonial"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -189,7 +189,7 @@ export default function TestimonialsSection() {
             {/* Next button */}
             <button
               onClick={next}
-              className="w-10 h-10 rounded-full glass-card flex items-center justify-center text-[#606060] hover:text-white hover:border-[#b5915a]/40 transition-all duration-200"
+              className="w-10 h-10 rounded-full glass-card flex items-center justify-center text-[#666666] hover:text-[#0a0a0a] hover:border-[#b5915a]/40 transition-all duration-200"
               aria-label="Next testimonial"
             >
               <ChevronRight className="w-5 h-5" />
@@ -205,7 +205,7 @@ export default function TestimonialsSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-14 text-center"
         >
-          <p className="text-[#404040] text-xs uppercase tracking-widest mb-5">Client organisations</p>
+          <p className="text-[#999999] text-xs uppercase tracking-widest mb-5">Client organisations</p>
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-3 text-[#2a2a2a] text-sm font-semibold tracking-wide">
             {TESTIMONIALS.map((t) => (
               <span key={t.company}>{t.company}</span>

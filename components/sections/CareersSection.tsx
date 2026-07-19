@@ -62,7 +62,7 @@ const POSITIONS = [
 
 export default function CareersSection() {
   return (
-    <section id="careers" className="section-padding bg-[#0a0a0a] relative overflow-hidden">
+    <section id="careers" className="section-padding bg-white relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -95,8 +95,8 @@ export default function CareersSection() {
               <div className="w-9 h-9 rounded-xl bg-[#b5915a]/10 flex items-center justify-center mb-3 group-hover:bg-[#b5915a]/15 transition-colors duration-300">
                 <benefit.icon className="w-4 h-4 text-[#b5915a]" />
               </div>
-              <h4 className="text-white font-semibold text-sm mb-1">{benefit.label}</h4>
-              <p className="text-[#505050] text-xs leading-relaxed">{benefit.description}</p>
+              <h4 className="text-[#0a0a0a] font-semibold text-sm mb-1">{benefit.label}</h4>
+              <p className="text-[#777777] text-xs leading-relaxed">{benefit.description}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -112,14 +112,14 @@ export default function CareersSection() {
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#b5915a] to-[#c9a96e] rounded-l-xl" />
           <div className="pl-4 md:pl-6 grid md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-xl font-bold text-white mb-3">Our Culture</h3>
-              <p className="text-[#606060] leading-relaxed text-sm">
+              <h3 className="text-xl font-bold text-[#0a0a0a] mb-3">Our Culture</h3>
+              <p className="text-[#666666] leading-relaxed text-sm">
                 At Dominare, we believe the best technology is built by the best people — and great people thrive in environments of trust, autonomy, and purpose. We&rsquo;ve built a culture where excellence is recognised, failure is a learning opportunity, and every individual contribution shapes our collective trajectory.
               </p>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white mb-3">Our Commitment</h3>
-              <p className="text-[#606060] leading-relaxed text-sm">
+              <h3 className="text-xl font-bold text-[#0a0a0a] mb-3">Our Commitment</h3>
+              <p className="text-[#666666] leading-relaxed text-sm">
                 We invest in our people with the same rigour we invest in our products. From structured mentorship and leadership development to generous parental leave and mental wellness support — we understand that sustainable excellence requires whole-person care. When you grow, we grow.
               </p>
             </div>
@@ -153,22 +153,22 @@ export default function CareersSection() {
             >
               <div className="flex items-start justify-between mb-3 gap-3">
                 <div>
-                  <h3 className="text-white font-semibold text-base mb-1">{position.title}</h3>
+                  <h3 className="text-[#0a0a0a] font-semibold text-base mb-1">{position.title}</h3>
                   <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#b5915a]/10 text-[#b5915a] border border-[#b5915a]/20">
                     {position.department}
                   </span>
                 </div>
-                <Briefcase className="w-5 h-5 text-[#303030] flex-shrink-0 mt-1" />
+                <Briefcase className="w-5 h-5 text-[#aaaaaa] flex-shrink-0 mt-1" />
               </div>
 
-              <p className="text-[#606060] text-sm leading-relaxed mb-4">{position.description}</p>
+              <p className="text-[#666666] text-sm leading-relaxed mb-4">{position.description}</p>
 
               <div className="flex flex-wrap gap-4 mb-5">
-                <div className="flex items-center gap-1.5 text-[#505050] text-xs">
+                <div className="flex items-center gap-1.5 text-[#777777] text-xs">
                   <Clock className="w-3.5 h-3.5" />
                   {position.type}
                 </div>
-                <div className="flex items-center gap-1.5 text-[#505050] text-xs">
+                <div className="flex items-center gap-1.5 text-[#777777] text-xs">
                   <MapPin className="w-3.5 h-3.5" />
                   {position.location}
                 </div>
@@ -189,7 +189,7 @@ export default function CareersSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center mt-10"
         >
-          <p className="text-[#505050] text-sm mb-4">Don&rsquo;t see the right role? We&rsquo;re always looking for exceptional talent.</p>
+          <p className="text-[#777777] text-sm mb-4">Don&rsquo;t see the right role? We&rsquo;re always looking for exceptional talent.</p>
           <button className="btn-outline py-3 px-8">
             Send Open Application
           </button>

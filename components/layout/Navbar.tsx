@@ -48,7 +48,7 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 shadow-2xl'
+          ? 'bg-white/90 backdrop-blur-xl border-b border-black/[0.07] shadow-sm'
           : 'bg-transparent border-b border-transparent'
       }`}
     >
@@ -60,8 +60,8 @@ export default function Navbar() {
               <span className="text-[#0a0a0a] font-black text-sm">D</span>
             </div>
             <div className="leading-tight">
-              <span className="text-white font-black text-lg tracking-tight">Dominare</span>
-              <span className="text-[#a0a0a0] font-medium text-lg tracking-tight"> Tech</span>
+              <span className="text-[#0a0a0a] font-black text-lg tracking-tight">Dominare</span>
+              <span className="text-[#555555] font-medium text-lg tracking-tight"> Tech</span>
             </div>
           </Link>
 
@@ -74,8 +74,8 @@ export default function Navbar() {
                 onClick={() => handleClick(link.href)}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   isActive(link.href)
-                    ? 'text-white bg-white/5'
-                    : 'text-[#a0a0a0] hover:text-white hover:bg-white/5'
+                    ? 'text-[#0a0a0a] bg-black/5'
+                    : 'text-[#555555] hover:text-[#0a0a0a] hover:bg-black/5'
                 } ${link.label === 'HIVE ERP' ? 'text-[#b5915a] hover:text-[#c9a96e]' : ''}`}
               >
                 {link.label}
@@ -93,7 +93,7 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg glass-card text-white"
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg glass-card text-[#0a0a0a]"
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -109,7 +109,7 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="lg:hidden overflow-hidden border-t border-white/5 bg-black/90 backdrop-blur-xl"
+            className="lg:hidden overflow-hidden border-t border-black/[0.07] bg-white/95 backdrop-blur-xl"
           >
             <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-1">
               {NAV_LINKS.map((link) => (
@@ -120,7 +120,7 @@ export default function Navbar() {
                   className={`px-4 py-3 font-medium rounded-xl transition-all text-sm ${
                     link.label === 'HIVE ERP'
                       ? 'text-[#b5915a]'
-                      : 'text-[#a0a0a0] hover:text-white hover:bg-white/5'
+                      : 'text-[#555555] hover:text-[#0a0a0a] hover:bg-black/5'
                   }`}
                 >
                   {link.label}

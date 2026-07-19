@@ -117,7 +117,7 @@ export default function WhyDominareSection() {
   const active = FEATURES[activeFeature]
 
   return (
-    <section id="why" className="section-padding bg-[#0a0a0a] relative overflow-hidden">
+    <section id="why" className="section-padding bg-white relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -149,8 +149,8 @@ export default function WhyDominareSection() {
                 onClick={() => handleSelect(i)}
                 className={`flex items-center gap-3 px-5 py-4 rounded-xl text-left whitespace-nowrap lg:whitespace-normal transition-all duration-300 flex-shrink-0 lg:flex-shrink border ${
                   activeFeature === i
-                    ? 'bg-white/5 border-[#b5915a]/40 text-white'
-                    : 'border-transparent text-[#606060] hover:text-[#a0a0a0] hover:bg-white/3'
+                    ? 'bg-white/5 border-[#b5915a]/40 text-[#0a0a0a]'
+                    : 'border-transparent text-[#666666] hover:text-[#555555] hover:bg-white/3'
                 }`}
               >
                 <div
@@ -160,7 +160,7 @@ export default function WhyDominareSection() {
                 >
                   <feature.icon
                     className={`w-4 h-4 transition-colors duration-300 ${
-                      activeFeature === i ? 'text-[#b5915a]' : 'text-[#404040]'
+                      activeFeature === i ? 'text-[#b5915a]' : 'text-[#999999]'
                     }`}
                   />
                 </div>
@@ -190,20 +190,20 @@ export default function WhyDominareSection() {
                     <active.icon className="w-7 h-7 text-[#b5915a]" />
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-black text-white">{active.stat}</div>
-                    <div className="text-xs text-[#505050] mt-0.5">{active.statLabel}</div>
+                    <div className="text-3xl font-black text-[#0a0a0a]">{active.stat}</div>
+                    <div className="text-xs text-[#777777] mt-0.5">{active.statLabel}</div>
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white mb-3">{active.title}</h3>
-                <p className="text-[#606060] leading-relaxed mb-6 text-base">{active.description}</p>
+                <h3 className="text-2xl font-bold text-[#0a0a0a] mb-3">{active.title}</h3>
+                <p className="text-[#666666] leading-relaxed mb-6 text-base">{active.description}</p>
 
                 {/* Points */}
                 <div className="space-y-3">
                   {active.points.map((point) => (
                     <div key={point} className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-[#b5915a] flex-shrink-0 mt-0.5" />
-                      <span className="text-[#a0a0a0] text-sm">{point}</span>
+                      <span className="text-[#555555] text-sm">{point}</span>
                     </div>
                   ))}
                 </div>

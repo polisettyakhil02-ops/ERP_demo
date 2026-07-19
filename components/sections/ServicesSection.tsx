@@ -92,7 +92,7 @@ export default function ServicesSection() {
   const [activePillar, setActivePillar] = useState<string | null>(null)
 
   return (
-    <section id="services" className="section-padding bg-[#0a0a0a] relative">
+    <section id="services" className="section-padding bg-white relative">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -123,7 +123,7 @@ export default function ServicesSection() {
                 variants={fadeUpVariants}
                 className="glass-card overflow-hidden cursor-pointer group"
                 onClick={() => setActivePillar(isOpen ? null : pillar.id)}
-                style={{ background: 'rgba(255,255,255,0.025)' }}
+                style={{ background: 'rgba(0,0,0,0.025)' }}
               >
                 {/* Pillar header */}
                 <div className="p-7">
@@ -136,16 +136,16 @@ export default function ServicesSection() {
                   </div>
 
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-white leading-tight">{pillar.title}</h3>
+                    <h3 className="text-xl font-bold text-[#0a0a0a] leading-tight">{pillar.title}</h3>
                     <motion.div
                       animate={{ rotate: isOpen ? 180 : 0 }}
                       transition={{ duration: 0.3 }}
                       className="flex-shrink-0 mt-0.5"
                     >
-                      <ChevronDown className="w-5 h-5 text-[#505050]" />
+                      <ChevronDown className="w-5 h-5 text-[#777777]" />
                     </motion.div>
                   </div>
-                  <p className="text-[#606060] text-sm leading-relaxed">{pillar.tagline}</p>
+                  <p className="text-[#666666] text-sm leading-relaxed">{pillar.tagline}</p>
 
                   {/* Service count pill */}
                   <div className="mt-4 flex items-center gap-2">
@@ -155,7 +155,7 @@ export default function ServicesSection() {
                     >
                       {pillar.services.length} services
                     </span>
-                    <span className="text-[#404040] text-xs">Click to expand</span>
+                    <span className="text-[#999999] text-xs">Click to expand</span>
                   </div>
                 </div>
 
@@ -171,7 +171,7 @@ export default function ServicesSection() {
                     >
                       <div
                         className="px-7 pb-7 border-t pt-5"
-                        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                        style={{ borderColor: 'rgba(0,0,0,0.06)' }}
                       >
                         <ul className="space-y-3">
                           {pillar.services.map((service) => (
@@ -183,13 +183,13 @@ export default function ServicesSection() {
                                 <service.icon className="w-3.5 h-3.5" style={{ color: pillar.color }} />
                               </div>
                               <div>
-                                <span className="text-[#c0c0c0] text-sm font-medium">{service.label}</span>
+                                <span className="text-[#3a3a3a] text-sm font-medium">{service.label}</span>
                                 {service.tag && (
                                   <span
                                     className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                                       service.tag === 'Coming Soon'
-                                        ? 'bg-white/5 text-[#505050]'
-                                        : 'text-[#606060] bg-white/4'
+                                        ? 'bg-white/5 text-[#777777]'
+                                        : 'text-[#666666] bg-white/4'
                                     }`}
                                   >
                                     {service.tag}
@@ -228,7 +228,7 @@ export default function ServicesSection() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mt-12 text-center"
         >
-          <p className="text-[#505050] text-sm mb-4">Have a project in mind? Let&rsquo;s discuss it.</p>
+          <p className="text-[#777777] text-sm mb-4">Have a project in mind? Let&rsquo;s discuss it.</p>
           <Link href="/contact" className="btn-bronze inline-flex items-center gap-2">
             Start a Project
             <ArrowRight className="w-4 h-4" />

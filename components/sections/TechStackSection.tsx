@@ -41,7 +41,7 @@ export default function TechStackSection() {
     : TECH_STACK.filter((t) => t.category === activeCategory)
 
   return (
-    <section id="tech-stack" className="section-padding bg-[#0a0a0a] relative overflow-hidden">
+    <section id="tech-stack" className="section-padding bg-white relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -100,7 +100,7 @@ export default function TechStackSection() {
                 >
                   {tech.abbr}
                 </div>
-                <span className="text-[#a0a0a0] text-xs font-medium text-center leading-tight group-hover:text-white transition-colors duration-200">
+                <span className="text-[#555555] text-xs font-medium text-center leading-tight group-hover:text-[#0a0a0a] transition-colors duration-200">
                   {tech.name}
                 </span>
                 <span
@@ -129,8 +129,8 @@ export default function TechStackSection() {
             { value: '24/7', label: 'Platform Monitoring' },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
-              <div className="text-2xl md:text-3xl font-black text-white mb-1">{value}</div>
-              <div className="text-[#505050] text-sm">{label}</div>
+              <div className="text-2xl md:text-3xl font-black text-[#0a0a0a] mb-1">{value}</div>
+              <div className="text-[#777777] text-sm">{label}</div>
             </div>
           ))}
         </motion.div>

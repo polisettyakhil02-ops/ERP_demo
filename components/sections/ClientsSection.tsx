@@ -95,7 +95,7 @@ const SERVICE_TEXT_COLORS = {
 
 export default function ClientsSection() {
   return (
-    <section id="clients" className="section-padding bg-[#111111] relative overflow-hidden">
+    <section id="clients" className="section-padding bg-[#f5f5f5] relative overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
@@ -129,7 +129,7 @@ export default function ClientsSection() {
                 variants={fadeUpVariants}
                 whileHover={cardHover}
                 className="glass-card p-6 group flex flex-col gap-4"
-                style={{ background: 'rgba(255,255,255,0.025)' }}
+                style={{ background: 'rgba(0,0,0,0.025)' }}
               >
                 {/* Logo placeholder + external link */}
                 <div className="flex items-start justify-between">
@@ -139,15 +139,15 @@ export default function ClientsSection() {
                   >
                     {client.initials}
                   </div>
-                  <ExternalLink className="w-4 h-4 text-[#303030] group-hover:text-[#b5915a] transition-colors duration-200 mt-1" />
+                  <ExternalLink className="w-4 h-4 text-[#aaaaaa] group-hover:text-[#b5915a] transition-colors duration-200 mt-1" />
                 </div>
 
                 {/* Name */}
                 <div>
-                  <h3 className="text-white font-semibold text-base leading-tight mb-0.5">
+                  <h3 className="text-[#0a0a0a] font-semibold text-base leading-tight mb-0.5">
                     {client.name}
                   </h3>
-                  <p className="text-[#505050] text-xs">{client.location}</p>
+                  <p className="text-[#777777] text-xs">{client.location}</p>
                 </div>
 
                 {/* Service badge */}
@@ -168,13 +168,13 @@ export default function ClientsSection() {
           <motion.div
             variants={fadeUpVariants}
             className="glass-card p-6 flex flex-col items-center justify-center gap-3 border-dashed"
-            style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}
+            style={{ borderColor: 'rgba(0,0,0,0.06)', background: 'rgba(0,0,0,0.01)' }}
           >
             <div className="w-14 h-14 rounded-2xl bg-white/3 flex items-center justify-center">
-              <span className="text-2xl text-[#303030] font-black">+</span>
+              <span className="text-2xl text-[#aaaaaa] font-black">+</span>
             </div>
-            <p className="text-[#404040] text-sm text-center font-medium">More clients joining</p>
-            <p className="text-[#303030] text-xs text-center">Growing portfolio across education, business & healthcare</p>
+            <p className="text-[#999999] text-sm text-center font-medium">More clients joining</p>
+            <p className="text-[#aaaaaa] text-xs text-center">Growing portfolio across education, business & healthcare</p>
           </motion.div>
         </motion.div>
 
@@ -184,7 +184,7 @@ export default function ClientsSection() {
           whileInView={{ opacity: 1 }}
           viewport={viewportConfig}
           transition={{ delay: 0.4 }}
-          className="text-center text-[#303030] text-xs mt-8"
+          className="text-center text-[#aaaaaa] text-xs mt-8"
         >
           Client logos can be added — share image files to replace the initials placeholders.
         </motion.p>
