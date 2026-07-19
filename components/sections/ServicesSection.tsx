@@ -1,105 +1,96 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Code2,
-  Brain,
-  Cpu,
-  Cloud,
-  Shield,
-  BarChart3,
-  Zap,
+  Smartphone,
+  ShoppingCart,
+  Globe,
+  Layers,
   Database,
-  Users,
-  Settings,
+  HeartPulse,
+  Briefcase,
+  Wrench,
+  Wifi,
+  Monitor,
+  FlaskConical,
+  GraduationCap,
+  ChevronDown,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import Link from 'next/link'
 import SectionHeader from '@/components/ui/SectionHeader'
-import { containerVariants, fadeUpVariants, cardHover, cardTap, viewportConfig } from '@/lib/motion'
+import { containerVariants, fadeUpVariants, viewportConfig } from '@/lib/motion'
 
 interface Service {
-  icon: LucideIcon
-  title: string
-  description: string
-  color: string
-  bgColor: string
+  icon: typeof Code2
+  label: string
+  tag?: string
 }
 
-const SERVICES: Service[] = [
+interface Pillar {
+  id: string
+  icon: typeof Code2
+  title: string
+  tagline: string
+  color: string
+  bgColor: string
+  services: Service[]
+}
+
+const PILLARS: Pillar[] = [
   {
+    id: 'software',
     icon: Code2,
-    title: 'Enterprise Software',
-    description: 'Custom-built, mission-critical software engineered for performance, scalability, and long-term reliability at enterprise scale.',
+    title: 'Software Development',
+    tagline: 'Custom digital products built with modern stacks',
     color: '#60a5fa',
     bgColor: 'rgba(96, 165, 250, 0.08)',
+    services: [
+      { icon: Globe, label: 'Website Development' },
+      { icon: Layers, label: 'Web Application Development' },
+      { icon: Smartphone, label: 'Android Application', tag: 'Play Store + White Label' },
+      { icon: ShoppingCart, label: 'E-commerce Stores' },
+      { icon: ShoppingCart, label: 'Shopify Stores' },
+      { icon: Code2, label: 'Custom Software', tag: 'MERN / MEVN Stack' },
+    ],
   },
   {
-    icon: Brain,
-    title: 'Artificial Intelligence',
-    description: 'Production-ready AI systems including NLP, computer vision, predictive analytics, and decision automation for real-world impact.',
-    color: '#a78bfa',
-    bgColor: 'rgba(167, 139, 250, 0.08)',
+    id: 'enterprise',
+    icon: Database,
+    title: 'Enterprise Solutions',
+    tagline: 'Purpose-built platforms for complex operations',
+    color: '#b5915a',
+    bgColor: 'rgba(181, 145, 90, 0.08)',
+    services: [
+      { icon: GraduationCap, label: 'HIVE ERP', tag: 'School Management System' },
+      { icon: HeartPulse, label: 'HMS', tag: 'Hospital Management System' },
+      { icon: Briefcase, label: 'Job Hiring Platform', tag: 'Coming Soon' },
+    ],
   },
   {
-    icon: Cpu,
-    title: 'Intelligent Automation',
-    description: 'End-to-end process automation solutions that eliminate manual overhead, reduce error rates, and accelerate business velocity.',
+    id: 'hardware',
+    icon: Wrench,
+    title: 'Hardware & Infrastructure',
+    tagline: 'End-to-end physical technology solutions',
     color: '#34d399',
     bgColor: 'rgba(52, 211, 153, 0.08)',
-  },
-  {
-    icon: Cloud,
-    title: 'Cloud Infrastructure',
-    description: 'Multi-cloud architecture, migration strategies, and managed infrastructure designed for resilience, security, and cost efficiency.',
-    color: '#38bdf8',
-    bgColor: 'rgba(56, 189, 248, 0.08)',
-  },
-  {
-    icon: Shield,
-    title: 'Cyber Security',
-    description: 'Comprehensive security posture management, threat detection, penetration testing, and compliance frameworks for regulated industries.',
-    color: '#f87171',
-    bgColor: 'rgba(248, 113, 113, 0.08)',
-  },
-  {
-    icon: BarChart3,
-    title: 'Data Analytics',
-    description: 'Enterprise data lakes, BI platforms, and real-time analytics pipelines that convert raw data into actionable business intelligence.',
-    color: '#fbbf24',
-    bgColor: 'rgba(251, 191, 36, 0.08)',
-  },
-  {
-    icon: Zap,
-    title: 'Digital Transformation',
-    description: 'Strategic technology modernisation programs that align people, process, and platforms for accelerated digital maturity.',
-    color: '#fb923c',
-    bgColor: 'rgba(251, 146, 60, 0.08)',
-  },
-  {
-    icon: Database,
-    title: 'ERP Development',
-    description: 'Bespoke ERP systems and platform implementations tailored to complex operational needs across manufacturing, logistics, and finance.',
-    color: '#f97316',
-    bgColor: 'rgba(249, 115, 22, 0.08)',
-  },
-  {
-    icon: Users,
-    title: 'CRM Solutions',
-    description: 'Intelligent customer relationship platforms that unify sales, marketing, and service operations with rich automation and analytics.',
-    color: '#ec4899',
-    bgColor: 'rgba(236, 72, 153, 0.08)',
-  },
-  {
-    icon: Settings,
-    title: 'Managed IT Services',
-    description: 'Proactive infrastructure monitoring, support, and optimisation — ensuring peak performance and uptime with 24/7 expert coverage.',
-    color: '#94a3b8',
-    bgColor: 'rgba(148, 163, 184, 0.08)',
+    services: [
+      { icon: Wrench, label: 'Hardware Maintenance' },
+      { icon: Wifi, label: 'Network Setup & Configuration' },
+      { icon: FlaskConical, label: 'Hardware Procurement' },
+      { icon: Briefcase, label: 'Office Setup Solutions' },
+      { icon: Monitor, label: 'Digital Panels', tag: 'Corporate & Schools' },
+      { icon: GraduationCap, label: 'Computer Lab Setup', tag: 'Schools & Colleges' },
+    ],
   },
 ]
 
 export default function ServicesSection() {
+  const [activePillar, setActivePillar] = useState<string | null>(null)
+
   return (
     <section id="services" className="section-padding bg-[#0a0a0a] relative">
       <div
@@ -113,8 +104,8 @@ export default function ServicesSection() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <SectionHeader
           label="What We Do"
-          title="Enterprise Solutions Built to Scale"
-          subtitle="From intelligent automation to cloud-native architecture — every solution we build is engineered for performance, security, and long-term value."
+          title="Three Pillars of Excellence"
+          subtitle="From custom software to enterprise systems to physical infrastructure — we deliver end-to-end technology solutions under one roof."
         />
 
         <motion.div
@@ -122,38 +113,126 @@ export default function ServicesSection() {
           initial="hidden"
           whileInView="visible"
           viewport={viewportConfig}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {SERVICES.map((service) => (
-            <motion.div
-              key={service.title}
-              variants={fadeUpVariants}
-              whileHover={cardHover}
-              whileTap={cardTap}
-              className="glass-card p-6 group cursor-default"
-            >
-              {/* Icon */}
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center mb-5 flex-shrink-0"
-                style={{ background: service.bgColor }}
+          {PILLARS.map((pillar) => {
+            const isOpen = activePillar === pillar.id
+            return (
+              <motion.div
+                key={pillar.id}
+                variants={fadeUpVariants}
+                className="glass-card overflow-hidden cursor-pointer group"
+                onClick={() => setActivePillar(isOpen ? null : pillar.id)}
+                style={{ background: 'rgba(255,255,255,0.025)' }}
               >
-                <service.icon className="w-5 h-5" style={{ color: service.color }} />
-              </div>
+                {/* Pillar header */}
+                <div className="p-7">
+                  {/* Icon */}
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                    style={{ background: pillar.bgColor }}
+                  >
+                    <pillar.icon className="w-7 h-7" style={{ color: pillar.color }} />
+                  </div>
 
-              <h3 className="text-white font-semibold text-base mb-2 leading-snug">
-                {service.title}
-              </h3>
-              <p className="text-[#606060] text-sm leading-relaxed mb-5">
-                {service.description}
-              </p>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="text-xl font-bold text-white leading-tight">{pillar.title}</h3>
+                    <motion.div
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex-shrink-0 mt-0.5"
+                    >
+                      <ChevronDown className="w-5 h-5 text-[#505050]" />
+                    </motion.div>
+                  </div>
+                  <p className="text-[#606060] text-sm leading-relaxed">{pillar.tagline}</p>
 
-              {/* Hover reveal */}
-              <div className="flex items-center gap-1.5 text-[#b5915a] text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-0 group-hover:translate-x-0.5">
-                Learn more
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </motion.div>
-          ))}
+                  {/* Service count pill */}
+                  <div className="mt-4 flex items-center gap-2">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      style={{ background: pillar.bgColor, color: pillar.color }}
+                    >
+                      {pillar.services.length} services
+                    </span>
+                    <span className="text-[#404040] text-xs">Click to expand</span>
+                  </div>
+                </div>
+
+                {/* Expandable services list */}
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.35, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="px-7 pb-7 border-t pt-5"
+                        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                      >
+                        <ul className="space-y-3">
+                          {pillar.services.map((service) => (
+                            <li key={service.label} className="flex items-start gap-3">
+                              <div
+                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                                style={{ background: pillar.bgColor }}
+                              >
+                                <service.icon className="w-3.5 h-3.5" style={{ color: pillar.color }} />
+                              </div>
+                              <div>
+                                <span className="text-[#c0c0c0] text-sm font-medium">{service.label}</span>
+                                {service.tag && (
+                                  <span
+                                    className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                      service.tag === 'Coming Soon'
+                                        ? 'bg-white/5 text-[#505050]'
+                                        : 'text-[#606060] bg-white/4'
+                                    }`}
+                                  >
+                                    {service.tag}
+                                  </span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {pillar.id === 'enterprise' && (
+                          <Link
+                            href="/hive-erp"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-5 flex items-center gap-1.5 text-[#b5915a] text-sm font-semibold hover:gap-2.5 transition-all duration-200"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Explore HIVE ERP
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )
+          })}
+        </motion.div>
+
+        {/* Bottom CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={viewportConfig}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-12 text-center"
+        >
+          <p className="text-[#505050] text-sm mb-4">Have a project in mind? Let&rsquo;s discuss it.</p>
+          <Link href="/contact" className="btn-bronze inline-flex items-center gap-2">
+            Start a Project
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </motion.div>
       </div>
     </section>
