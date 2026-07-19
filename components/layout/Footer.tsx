@@ -25,7 +25,7 @@ const SOLUTIONS = [
 ]
 
 const SOCIAL = [
-  { icon: Linkedin, label: 'LinkedIn', href: '#' },
+  { icon: Linkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/in/dominare-tech-a05b9a391/' },
   { icon: Twitter, label: 'Twitter', href: '#' },
   { icon: Instagram, label: 'Instagram', href: '#' },
   { icon: Github, label: 'GitHub', href: '#' },
