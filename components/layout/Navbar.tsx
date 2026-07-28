@@ -8,9 +8,8 @@ import { Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Solutions', href: '/#services' },
+  { label: 'Solutions', href: '/solutions' },
   { label: 'HIVE ERP', href: '/hive-erp' },
-  { label: 'Industries', href: '/#industries' },
   { label: 'About', href: '/about' },
   { label: 'Careers', href: '/#careers' },
   { label: 'Contact', href: '/contact' },
