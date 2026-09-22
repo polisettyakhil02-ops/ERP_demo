@@ -141,3 +141,21 @@ are available:
   notices, etc.) and I'll wire them up.
 - Audit log viewer UI — `created_by`/`updated_by`/`deleted_at` are tracked on
   every record already, just not exposed as a dedicated report yet.
+
+## 10. AI feature requests (`/api/feature-requests`)
+
+Staff can click **Suggest a feature** in the app and describe an idea to an
+AI assistant (Claude, via the official `@anthropic-ai/sdk`). The assistant
+asks follow-up questions and drafts a structured request. The user submits
+it, and a Super Admin reviews it on the Feature Requests page. The assistant
+only drafts text: it can't read ERP data and can't change the app.
+
+Environment:
+
+- `ANTHROPIC_API_KEY` (required for the chat). Without it, the chat answers
+  503 with a setup message and everything else keeps working.
+- `FEATURE_CHAT_MODEL` (optional) overrides the model (default
+  `claude-opus-5`).
+
+Every chat turn is a paid API call, so turns are rate-limited to 30 per user
+every 15 minutes (`routes/featureRequestRoutes.js`).
