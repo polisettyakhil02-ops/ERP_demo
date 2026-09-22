@@ -67,6 +67,7 @@ import ConcessionsOverview from "@/pages/ConcessionsOverview";
 import BPBusRoutes from "@/pages/BPBusRoutes";
 import BPSubjects from "@/pages/BPSubjects";
 import MyProfile from "@/pages/MyProfile";
+import FeatureRequests from "@/pages/FeatureRequests";
 
 const DASHBOARDS = {
   superadmin: SuperAdminDashboard,
@@ -186,6 +187,7 @@ const AuthenticatedApp = () => {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/profile" element={<MyProfile />} />
+          <Route path="/feature-requests" element={<FeatureRequests />} />
           <Route path="/fee-structure" element={<BPFeeStructure />} />
           <Route path="/student-fee-report" element={<StudentFeeReport />} />
           {/* Student-wise dues. Accepts ?class=&section= so the Class
