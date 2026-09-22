@@ -231,6 +231,15 @@ export const PERMISSIONS = {
     update: [PRINCIPAL, ADMIN_OFFICER],
     delete: [PRINCIPAL, ADMIN_OFFICER],
   },
+  // Ideas staff work out with the AI assistant and submit to the
+  // development team (see featureRequestController.js). Every staff role can
+  // submit and track its own; update (status / reply) lists no roles, so it
+  // is super_admin-only.
+  FeatureRequest: {
+    create: [PRINCIPAL, ADMIN_OFFICER, ACCOUNTS_MANAGER, TEACHER],
+    read: [PRINCIPAL, ADMIN_OFFICER, ACCOUNTS_MANAGER, TEACHER],
+    update: [],
+  },
   Appointment: {
     create: [PRINCIPAL, ADMIN_OFFICER, TEACHER],
     read: [PRINCIPAL, ADMIN_OFFICER, TEACHER], // further scoped to creator/with_whom in controller

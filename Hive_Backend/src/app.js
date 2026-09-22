@@ -34,6 +34,7 @@ import feeReceiptCancellationRoutes from "./routes/feeReceiptCancellationRoutes.
 import ticketRoutes from "./routes/ticketRoutes.js";
 import examScheduleRouter from "./routes/examScheduleRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
+import featureRequestRoutes from "./routes/featureRequestRoutes.js";
 
 dotenv.config();
 
@@ -111,6 +112,7 @@ app.use("/api/fee-receipt-cancellation-requests", feeReceiptCancellationRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/exam-schedules", examScheduleRouter);
 app.use("/api/subjects", subjectRoutes);
+app.use("/api/feature-requests", featureRequestRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -5,6 +5,7 @@ import { useLogout } from "@/lib/useLogout";
 import { useSchoolBranding } from "@/lib/schoolBranding";
 import SchoolLogo from "@/components/SchoolLogo";
 import NotificationBell from "./NotificationBell";
+import FeatureChat from "@/components/ai/FeatureChat";
 import {
   LayoutDashboard,
   Users,
@@ -35,6 +36,7 @@ import {
   Bell,
   HeadphonesIcon,
   Bus,
+  Sparkles,
 } from "lucide-react";
 
 export const NAV_BY_ROLE = {
@@ -42,6 +44,7 @@ export const NAV_BY_ROLE = {
     { label: "Dashboard", icon: LayoutDashboard, path: "/" },
     { label: "Schools", icon: Building2, path: "/schools" },
     { label: "Branches", icon: Building2, path: "/branches" },
+    { label: "Feature Requests", icon: Sparkles, path: "/feature-requests" },
   ],
   finance: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -486,9 +489,12 @@ export default function RoleLayout({ user }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        {/* Extra bottom padding so the floating "Suggest a feature" button
+            never sits on top of a page's last row of controls. */}
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-24">
           <Outlet />
         </main>
+        <FeatureChat />
       </div>
     </div>
   );

@@ -1233,3 +1233,34 @@ export const expenditureApi = {
     return data?.data ?? data;
   },
 };
+
+// feature request api - "Suggest a feature" (see components/ai/FeatureChat.jsx)
+export const featureRequestApi = {
+  /**
+   * POST /api/feature-requests/chat - one turn with the AI assistant.
+   * messages: [{ role: "user"|"assistant", content, draft? }], alternating
+   * and ending with the user. Resolves to { reply, draft } - draft is null
+   * until the assistant proposes one.
+   */
+  async chat(messages) {
+    const { data } = await http.post("/api/feature-requests/chat", {
+      messages,
+    });
+    return data?.data ?? data;
+  },
+  /** POST /api/feature-requests - body: draft fields + conversation */
+  async create(body) {
+    const { data } = await http.post("/api/feature-requests", body);
+    return data?.data ?? data;
+  },
+  /** GET /api/feature-requests?status= - own requests (all for Super Admin) */
+  async list(params = {}) {
+    const { data } = await http.get("/api/feature-requests", { params });
+    return data?.data ?? data;
+  },
+  /** PUT /api/feature-requests/:id - Super Admin only: { status?, admin_notes? } */
+  async update(id, body) {
+    const { data } = await http.put(`/api/feature-requests/${id}`, body);
+    return data?.data ?? data;
+  },
+};

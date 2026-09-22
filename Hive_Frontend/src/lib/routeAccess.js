@@ -17,6 +17,16 @@ const EXTRA_ACCESS = {
     "teacher",
     "consultant",
   ],
+  // Reached from the floating "Suggest a feature" chat's "My requests"
+  // link (every role), and from the sidebar for superadmin, who reviews
+  // everyone's requests there.
+  "/feature-requests": [
+    "superadmin",
+    "finance",
+    "principal",
+    "teacher",
+    "consultant",
+  ],
   "/bus-fee-report": ["finance", "consultant"],
   "/student-receipt": ["finance", "consultant"],
   // The Pending Dues report and the 10 category fee reports (Old/Admission/
