@@ -34,7 +34,7 @@ import {
 import { resolveBranchQueryFilter } from "../middleware/branchScope.js";
 import { todayDateString } from "../utils/dateUtils.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ROLES } from "../config/constants.js";
+import { MULTI_BRANCH_ROLES, ROLES } from "../config/constants.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const PAYMENT_ENTITY = "FeePayment";
@@ -281,6 +281,56 @@ const forbidden = (res, entity, action) =>
 // FeePayment - individual payment transactions
 // ---------------------------------------------------------------------
 
+// Fields an ad-hoc createPayment() may set. branch and receipt_no are always
+// decided server-side.
+const CREATE_PAYMENT_FIELDS = [
+  "student_id",
+  "student_name",
+  "academic_year",
+  "fee_type",
+  "amount",
+  "item_name",
+  "item_actual_fee",
+  "item_concession_fee",
+  "payment_date",
+  "payment_mode",
+  "voucher_type",
+  "voucher_no",
+  "cheque_date",
+  "transaction_no",
+  "bank_name",
+  "bank_branch",
+  "status",
+];
+
+// updatePayment(): how a payment was made can be corrected by anyone who
+// may edit payments...
+const PAYMENT_DETAIL_FIELDS = [
+  "payment_mode",
+  "voucher_no",
+  "cheque_date",
+  "transaction_no",
+  "bank_name",
+  "bank_branch",
+  "item_name",
+];
+// ...but changing how much was collected, for what, when, or whether it
+// still counts has the same effect as cancelling a receipt, so it needs
+// the same permission (FeePayment.delete - Admin Officer). Otherwise an
+// Accounts Manager could skip the cancellation-approval flow entirely.
+// Which student, branch and receipt a payment belongs to never changes.
+const PAYMENT_AMOUNT_FIELDS = [
+  "amount",
+  "fee_type",
+  "status",
+  "payment_date",
+  "item_actual_fee",
+  "item_concession_fee",
+];
+
+const pickFields = (body = {}, fields) =>
+  Object.fromEntries(fields.filter((f) => f in body).map((f) => [f, body[f]]));
+
 // GET /api/fee-payments
 // params (all optional): student_id, academic_year, status, sort, limit, from, to,
 // branch, search (matches student_name), class, payment_mode, fee_type, and
@@ -495,15 +545,41 @@ export const createPayment = async (req, res) => {
     if (!isAllowed(PAYMENT_ENTITY, "create", req.user.role))
       return forbidden(res, PAYMENT_ENTITY, "create");
 
-    const branch = req.user.branch || req.body.branch;
+    // Single-branch roles always record against their own branch; a
+    // multi-branch role picks one, and it must be one of theirs.
+    const branch = MULTI_BRANCH_ROLES.includes(req.user.role)
+      ? req.body.branch
+      : req.user.branch;
     if (!branch) {
       return res
         .status(400)
         .json({ success: false, message: "A branch is required." });
     }
+    const { allowed } = resolveBranchQueryFilter(req.user, branch);
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to that branch.",
+      });
+    }
+    if (
+      !req.body.student_id ||
+      !(await Student.exists({ _id: req.body.student_id, branch }))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Student not found in this branch.",
+      });
+    }
 
-    const receipt_no = req.body.receipt_no || (await generateReceiptNo(branch));
-    const record = await FeePayment.create({ ...req.body, branch, receipt_no });
+    // Always drawn from the branch's sequence - a client-chosen number
+    // could join an existing receipt and be cancelled or printed with it.
+    const receipt_no = await generateReceiptNo(branch);
+    const record = await FeePayment.create({
+      ...pickFields(req.body, CREATE_PAYMENT_FIELDS),
+      branch,
+      receipt_no,
+    });
 
     return res.status(201).json({ success: true, data: record });
   } catch (err) {
@@ -543,11 +619,18 @@ export const collectPayment = async (req, res) => {
       rows,
     } = req.body;
 
-    if (!student_id || !Array.isArray(rows) || rows.length === 0) {
+    // student_fee_report_id is required: an undefined _id would be dropped
+    // from the report query below and match any report in the branch.
+    if (
+      !student_fee_report_id ||
+      !student_id ||
+      !Array.isArray(rows) ||
+      rows.length === 0
+    ) {
       return res.status(400).json({
         success: false,
         message:
-          "student_id and at least one fee row with an amount are required.",
+          "student_fee_report_id, student_id and at least one fee row with an amount are required.",
       });
     }
     for (const row of rows) {
@@ -584,16 +667,6 @@ export const collectPayment = async (req, res) => {
     //   }
     // }
 
-    // req.user.branch wins whenever it's present - same hardening as
-    // createPayment() above, so a single-branch accounts manager can't
-    // submit a payment against a different branch than their own.
-    const branch = req.user.branch || req.body.branch;
-    if (!branch) {
-      return res
-        .status(400)
-        .json({ success: false, message: "A branch is required." });
-    }
-
     const { allowed: reportAllowed, filter: reportFilter } =
       resolveBranchQueryFilter(req.user);
     if (!reportAllowed) {
@@ -614,6 +687,11 @@ export const collectPayment = async (req, res) => {
           "No fee report found for this student - set one up before recording a payment.",
       });
     }
+    // The payment always belongs to the report's own student and branch.
+    // Taking these from the request let a payment be recorded against one
+    // student (or another branch) while crediting a different report.
+    const branch = preCheckReport.branch;
+    const reportStudentId = preCheckReport.student_id;
 
     // Editing the Previous Due row's Actual Amount (see AddPaymentDialog.jsx)
     // corrects old_fee itself, applied before the previous_due row's own cap
@@ -639,7 +717,7 @@ export const collectPayment = async (req, res) => {
     // they're drawn once out here rather than inside the transaction -
     // withTransaction re-runs its callback on a transient error, and
     // re-drawing would burn a fresh number on every retry.
-    const receipt_no = req.body.receipt_no || (await generateReceiptNo(branch));
+    const receipt_no = await generateReceiptNo(branch);
     // CV No. is always system-generated, regardless of whatever the client
     // sent - MV No. is exactly what was typed in (optional, left blank if
     // the person didn't fill it in).
@@ -650,7 +728,7 @@ export const collectPayment = async (req, res) => {
 
     const sharedFields = {
       branch,
-      student_id,
+      student_id: reportStudentId,
       student_name,
       academic_year,
       payment_date,
@@ -835,6 +913,19 @@ export const updatePayment = async (req, res) => {
     if (!isAllowed(PAYMENT_ENTITY, "update", req.user.role))
       return forbidden(res, PAYMENT_ENTITY, "update");
 
+    const touchesAmount = PAYMENT_AMOUNT_FIELDS.some((f) => f in req.body);
+    if (touchesAmount && !isAllowed(PAYMENT_ENTITY, "delete", req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Changing a payment's amount, type, date or status needs Admin Officer approval - request a receipt cancellation instead.",
+      });
+    }
+    const changes = pickFields(req.body, [
+      ...PAYMENT_DETAIL_FIELDS,
+      ...(touchesAmount ? PAYMENT_AMOUNT_FIELDS : []),
+    ]);
+
     const { allowed, filter } = resolveBranchQueryFilter(req.user);
     if (!allowed) {
       return res.status(403).json({
@@ -877,7 +968,7 @@ export const updatePayment = async (req, res) => {
           -1,
         );
 
-        Object.assign(payment, req.body);
+        Object.assign(payment, changes);
         await payment.save({ session });
 
         applyPaymentToReport(
