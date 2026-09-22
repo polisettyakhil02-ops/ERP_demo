@@ -187,7 +187,7 @@ export default function TeacherForm() {
   const [form, setForm] = useState({ ...EMPTY });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(null); // { name, email, password }
+  const [success, setSuccess] = useState(null); // { name, email }
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
 
@@ -233,7 +233,8 @@ export default function TeacherForm() {
       // One call, no auth: the backend creates both the Staff HR record and
       // the linked User login (email generated + de-duplicated server-side)
       // in a single request - see controllers/publicController.js. There's
-      // no session here to make two separate authenticated calls with.
+      // no session here to make two separate authenticated calls with. The
+      // login starts inactive; the branch activates it and sets a password.
       const { data } = await http.post("/api/public/teacher-registration", {
         full_name: form.full_name,
         branch: form.branch,
@@ -246,8 +247,7 @@ export default function TeacherForm() {
 
       setSuccess({
         name: form.full_name,
-        email: data.login.email,
-        password: data.login.password,
+        email: data.email,
       });
       setForm({ ...EMPTY });
       setErrors({});
@@ -287,9 +287,9 @@ export default function TeacherForm() {
                 {success.name} registered successfully!
               </p>
               <p className="text-xs text-green-700 mt-1">
-                Login created:{" "}
-                <span className="font-mono">{success.email}</span> / password{" "}
-                <span className="font-mono">{success.password}</span>
+                Login email:{" "}
+                <span className="font-mono">{success.email}</span>. Your
+                Principal will activate this login and share your password.
               </p>
               <p className="text-xs text-green-600 mt-0.5">
                 You can now register another teacher below.

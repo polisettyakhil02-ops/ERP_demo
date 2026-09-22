@@ -37,14 +37,6 @@ export const requireRole =
     if (!req.user) {
       return next(new ApiError(401, "Authentication required."));
     }
-    console.log("====================================");
-    console.log(`${req.method} ${req.originalUrl}`);
-    console.log("Authorization:", req.headers.authorization);
-    console.log("====================================");
-    console.log("Allowed Roles:", allowedRoles);
-    console.log("User:", req.user);
-    console.log("User Role:", req.user.role);
-
     if (
       req.user.role === "super_admin" ||
       allowedRoles.includes(req.user.role)
