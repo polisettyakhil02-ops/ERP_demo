@@ -89,7 +89,7 @@ async function seed() {
 
   console.log("\n[seed] Done. Use the Principal account to log in and create");
   console.log("[seed] Admin Officer / Accounts Manager / Teacher / Student accounts");
-  console.log("[seed] via POST /api/auth/users.\n");
+  console.log("[seed] via POST /api/users.\n");
 
   await mongoose.disconnect();
   process.exit(0);

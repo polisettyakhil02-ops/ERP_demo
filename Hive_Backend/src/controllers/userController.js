@@ -24,14 +24,80 @@ const forbidden = (res, action) =>
 
 // Which roles a creator may assign to a brand-new staff account. Admin
 // Officer manages branch-level leadership across the org (Principal,
-// Accounts Manager); Accounts Manager only ever adds Teachers into their
-// own branch. Principal and super_admin are intentionally left out of
-// this map - their existing (broader) ability to create users is
-// unchanged, since only these two roles' scopes were narrowed.
+// Accounts Manager); Accounts Manager and Principal only ever add Teachers
+// into their own branch. super_admin is unrestricted and not listed; any
+// other role gets no entry and so can't create users at all.
 const ASSIGNABLE_ROLES_ON_CREATE = {
   [ROLES.ADMIN_OFFICER]: [ROLES.PRINCIPAL, ROLES.ACCOUNTS_MANAGER],
   [ROLES.ACCOUNTS_MANAGER]: [ROLES.TEACHER],
+  [ROLES.PRINCIPAL]: [ROLES.TEACHER],
 };
+
+// Which existing accounts an editor may update or deactivate, and which
+// roles they may move an account into. Admin Officer also covers Teachers
+// in their branches (the Staff page lists them); Principal and Accounts
+// Manager only ever manage Teachers. super_admin is unrestricted.
+const MANAGEABLE_ROLES = {
+  [ROLES.ADMIN_OFFICER]: [
+    ROLES.PRINCIPAL,
+    ROLES.ACCOUNTS_MANAGER,
+    ROLES.TEACHER,
+  ],
+  [ROLES.ACCOUNTS_MANAGER]: [ROLES.TEACHER],
+  [ROLES.PRINCIPAL]: [ROLES.TEACHER],
+};
+
+// The only fields the Staff page's add/edit form may set directly. role,
+// branch and password are handled separately because each needs its own
+// check; everything else on User (branches, refresh_token_version,
+// delete_requested*, linked_student_id, schoolName, ...) is never
+// client-writable here.
+const EDITABLE_FIELDS = [
+  "full_name",
+  "email",
+  "phone",
+  "address",
+  "subject_taught",
+  "qualification",
+  "joining_date",
+  "salary",
+  "signature_url",
+  "is_active",
+];
+
+function pickEditableFields(body = {}) {
+  const picked = {};
+  for (const field of EDITABLE_FIELDS) {
+    if (field in body) picked[field] = body[field];
+  }
+  return picked;
+}
+
+// Whether `branchId` is one of the editor's own branches.
+function inEditorBranchScope(editor, branchId) {
+  if (editor.role === ROLES.SUPER_ADMIN) return true;
+  if (!branchId) return false;
+  if (MULTI_BRANCH_ROLES.includes(editor.role)) {
+    return (editor.branches || []).some((b) => String(b) === String(branchId));
+  }
+  return String(editor.branch) === String(branchId);
+}
+
+// Returns why `editor` may not update or deactivate `target`, or null if
+// they may.
+function manageError(editor, target) {
+  if (editor.role === ROLES.SUPER_ADMIN) return null;
+  if (String(editor._id) === String(target._id)) {
+    return "You cannot change your own account here.";
+  }
+  if (!(MANAGEABLE_ROLES[editor.role] || []).includes(target.role)) {
+    return "You do not have permission to modify this staff member.";
+  }
+  if (!inEditorBranchScope(editor, target.branch)) {
+    return "You can only modify staff in your own branch.";
+  }
+  return null;
+}
 
 // GET /api/users
 export const list = async (req, res) => {
@@ -138,13 +204,16 @@ export const create = async (req, res) => {
       });
     }
 
-    const assignableRoles = ASSIGNABLE_ROLES_ON_CREATE[req.user.role];
-    if (assignableRoles && !assignableRoles.includes(role)) {
+    const isSuperAdmin = req.user.role === ROLES.SUPER_ADMIN;
+    const assignableRoles = ASSIGNABLE_ROLES_ON_CREATE[req.user.role] || [];
+    if (!isSuperAdmin && !assignableRoles.includes(role)) {
       return res.status(403).json({
         success: false,
-        message: `Your role can only add: ${assignableRoles
-          .map((r) => r.replace("_", " "))
-          .join(", ")}.`,
+        message: assignableRoles.length
+          ? `Your role can only add: ${assignableRoles
+              .map((r) => r.replace("_", " "))
+              .join(", ")}.`
+          : "Your role cannot add staff accounts.",
       });
     }
 
@@ -152,13 +221,23 @@ export const create = async (req, res) => {
     // `branches` array - never `branch` - or resolveBranchQueryFilter would
     // wrongly pin them to a single branch (see branchScope.js). Force it to
     // null here regardless of what req.body/req.user happens to carry.
+    // Single-branch creators always add into their own branch; only
+    // multi-branch creators pick one, and it must be one of theirs.
     const branch = MULTI_BRANCH_ROLES.includes(role)
       ? null
-      : req.body.branch || req.user.branch;
+      : MULTI_BRANCH_ROLES.includes(req.user.role)
+        ? req.body.branch
+        : req.user.branch;
     if (SINGLE_BRANCH_ROLES.includes(role) && !branch) {
       return res.status(400).json({
         success: false,
         message: "Please select a branch for this role.",
+      });
+    }
+    if (branch && !inEditorBranchScope(req.user, branch)) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only add staff to your own branches.",
       });
     }
     const branchDetails = branch ? await Branch.findById(branch) : null;
@@ -166,7 +245,13 @@ export const create = async (req, res) => {
     // User.create() runs the schema's own pre-save hook, which hashes
     // the password automatically - never hash it again here.
     const doc = await User.create({
-      ...req.body,
+      ...pickEditableFields(req.body),
+      // Only super_admin may create multi-branch accounts, which need this.
+      ...(isSuperAdmin && "branches" in req.body
+        ? { branches: req.body.branches }
+        : {}),
+      role,
+      password,
       branch,
       schoolName: branchDetails?.schoolName || "Master Minds Default",
     });
@@ -202,11 +287,9 @@ export const update = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found." });
     }
-    if (req.user.role === ROLES.PRINCIPAL && existing.role !== ROLES.TEACHER) {
-      return res.status(403).json({
-        success: false,
-        message: "Principals can only modify Teacher records.",
-      });
+    const denied = manageError(req.user, existing);
+    if (denied) {
+      return res.status(403).json({ success: false, message: denied });
     }
     if (existing.delete_requested) {
       return res.status(409).json({
@@ -216,8 +299,60 @@ export const update = async (req, res) => {
       });
     }
 
-    const { password, ...rest } = req.body;
-    Object.assign(existing, rest);
+    const isSuperAdmin = req.user.role === ROLES.SUPER_ADMIN;
+    const { password } = req.body;
+    const changes = pickEditableFields(req.body);
+    if (isSuperAdmin && "branches" in req.body) {
+      changes.branches = req.body.branches;
+    }
+
+    // Accounts Manager deactivates staff only through the request-delete
+    // approval flow (see requestDelete below), never directly.
+    if (
+      req.user.role === ROLES.ACCOUNTS_MANAGER &&
+      changes.is_active === false &&
+      existing.is_active !== false
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Accounts Managers must request deactivation for Principal approval.",
+      });
+    }
+
+    if (req.body.role && req.body.role !== existing.role) {
+      if (req.body.role === ROLES.STUDENT) {
+        return res.status(400).json({
+          success: false,
+          message: "Staff accounts cannot be changed into student accounts.",
+        });
+      }
+      if (
+        !isSuperAdmin &&
+        !(MANAGEABLE_ROLES[req.user.role] || []).includes(req.body.role)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You do not have permission to assign that role.",
+        });
+      }
+      changes.role = req.body.role;
+    }
+
+    if (
+      "branch" in req.body &&
+      String(req.body.branch || "") !== String(existing.branch || "")
+    ) {
+      if (!inEditorBranchScope(req.user, req.body.branch)) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only move staff into your own branches.",
+        });
+      }
+      changes.branch = req.body.branch;
+    }
+
+    Object.assign(existing, changes);
     // Same invariant as create(): multi-branch roles must never carry a
     // `branch` value, whether it came in via this update or was already
     // stale on the document, or resolveBranchQueryFilter mis-scopes them.
@@ -226,6 +361,10 @@ export const update = async (req, res) => {
     }
     if (password) {
       existing.password = password; // pre-save hook re-hashes this on .save()
+    }
+    // A new password or a deactivation ends every existing session.
+    if (password || changes.is_active === false) {
+      existing.refresh_token_version += 1;
     }
     await existing.save();
 
@@ -487,11 +626,9 @@ export const remove = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found." });
     }
-    if (req.user.role === ROLES.PRINCIPAL && existing.role !== ROLES.TEACHER) {
-      return res.status(403).json({
-        success: false,
-        message: "Principals can only deactivate Teacher records.",
-      });
+    const denied = manageError(req.user, existing);
+    if (denied) {
+      return res.status(403).json({ success: false, message: denied });
     }
     if (existing.delete_requested) {
       return res.status(409).json({
@@ -502,6 +639,7 @@ export const remove = async (req, res) => {
     }
 
     existing.is_active = false;
+    existing.refresh_token_version += 1; // end any existing sessions
     await existing.save();
 
     return res.json({

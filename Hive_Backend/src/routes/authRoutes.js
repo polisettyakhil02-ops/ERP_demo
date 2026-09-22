@@ -1,6 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import {
   login,
   refresh,
@@ -9,12 +9,7 @@ import {
   verifyPassword,
   changePassword,
   updateMe,
-  createUser,
-  listUsers,
-  updateUser,
-  adminResetPassword,
 } from "../controllers/authController.js";
-import { ROLES } from "../config/constants.js";
 
 const router = express.Router();
 
@@ -40,14 +35,6 @@ router.put("/me", updateMe);
 router.post("/verify-password", verifyPassword);
 router.put("/change-password", changePassword);
 
-// User management - only Principal (own branch) or Super Admin (all branches)
-router.post("/users", requireRole(ROLES.PRINCIPAL), createUser);
-router.get("/users", requireRole(ROLES.PRINCIPAL), listUsers);
-router.put("/users/:id", requireRole(ROLES.PRINCIPAL), updateUser);
-router.put(
-  "/users/:id/reset-password",
-  requireRole(ROLES.PRINCIPAL),
-  adminResetPassword,
-);
+// Staff accounts are managed through /api/users (see userRouter.js).
 
 export default router;
