@@ -1,0 +1,25 @@
+// routes/expenditure.routes.js
+import express from "express";
+
+import { requireAuth } from "../middleware/auth.js";
+import * as expenditureController from "../controllers/expenditureController.js";
+
+const expenditureRoutes = express.Router();
+
+expenditureRoutes.use(requireAuth);
+
+expenditureRoutes.get("/", expenditureController.list);
+expenditureRoutes.post("/", expenditureController.create);
+// Whole-spreadsheet import in one request - must stay above the
+// "/:id/..." routes so "bulk" is never read as an id.
+expenditureRoutes.post("/bulk", expenditureController.bulkCreate);
+expenditureRoutes.put("/:id", expenditureController.update);
+expenditureRoutes.post("/:id/request-delete", expenditureController.requestDelete);
+expenditureRoutes.post("/:id/approve-delete", expenditureController.approveDelete);
+expenditureRoutes.post("/:id/reject-delete", expenditureController.rejectDelete);
+
+export default expenditureRoutes;
+
+// In your app entrypoint (e.g. server.js / app.js):
+//   import expenditureRoutes from "./routes/expenditure.routes.js";
+//   app.use("/api/expenditure", expenditureRoutes);

@@ -1,0 +1,34 @@
+name: Deploy Backend to Droplet
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # Explicitly target the backend runner via its GitHub label
+    runs-on: [self-hosted, backend-runner]
+
+    steps:
+      # 1. Checkout latest code into the runner workspace
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Sync files locally to /var/www/mm-backend using rsync
+      - name: Sync files to mm-backend
+        run: |
+          rsync -av --delete \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='uploads' \
+            ./ /var/www/mm-backend/
+
+      # 3. Install production dependencies and restart PM2 under backend-runner
+      - name: Install & Restart Backend Server
+        run: |
+          cd /var/www/mm-backend
+          npm install --production
+          pm2 restart server || pm2 start server.js --name "server"

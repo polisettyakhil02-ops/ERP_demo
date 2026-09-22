@@ -1,0 +1,109 @@
+// Central place for every enum the app relies on.
+// Keeping these in one file means RBAC, models, and validators never drift apart.
+
+export const ROLES = {
+  SUPER_ADMIN: "super_admin", // inactive feature flag-gated, see ROLES_ENABLED below
+  PRINCIPAL: "principal",
+  ADMIN_OFFICER: "admin_officer", // frontend label "finance" / "Admin Officer"
+  ACCOUNTS_MANAGER: "accounts_manager", // frontend label "consultant" / "Accounts Manager"
+  TEACHER: "teacher",
+  STUDENT: "student",
+};
+
+export const ALL_ROLES = Object.values(ROLES);
+
+// Super Admin now has a working frontend panel (Manage Schools) - active.
+export const SUPER_ADMIN_ENABLED = true;
+
+// Roles that are allowed to log in right now, given SUPER_ADMIN_ENABLED.
+export const ACTIVE_ROLES = SUPER_ADMIN_ENABLED
+  ? ALL_ROLES
+  : ALL_ROLES.filter((r) => r !== ROLES.SUPER_ADMIN);
+
+// Roles whose data access spans ALL branches rather than being scoped to one.
+export const MULTI_BRANCH_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN_OFFICER];
+export const SINGLE_BRANCH_ROLES = [
+  ROLES.TEACHER,
+  ROLES.ACCOUNTS_MANAGER,
+  ROLES.PRINCIPAL,
+];
+
+export const BRANCHES = [
+  "Hyderabad",
+  "Secunderabad",
+  "Miyapur",
+  "Jahangirnagar",
+  "Karmanghat",
+  "Hayathnagar Branch 1",
+  "Alwal",
+  "Kapra",
+  "Boduppal",
+  "Jogipet",
+  "Siddipet 2",
+  "Sircilla 2",
+  "Suraram",
+  "RC Puram",
+  "Chintal",
+  "Medchal",
+  "Beeramguda",
+  "Lingampally",
+  "Chandanagar",
+  "Narayankhed",
+  "Gopanpally",
+  "Siddipet 1",
+  "Shaheen Nagar",
+  "Shankarpally",
+  "Siddipet 3",
+  "Bowenpally",
+  "Yellareddypet",
+  "Sircilla 1",
+  "Mallampet",
+  "Kukatpally",
+  "Rampally",
+  "Pragathi Nagar",
+  "Kishanbagh",
+  "Falaknuma",
+  "Vani Block",
+  "Ayyappa Society",
+  "Fatehnagar",
+  "Kukatpally 2"
+];
+
+export const STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
