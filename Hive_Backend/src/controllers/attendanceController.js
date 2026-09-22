@@ -1,5 +1,11 @@
 import Attendance from "../models/Attendance.js";
-import { buildScopeFilter } from "../middleware/branchScope.js";
+import Class from "../models/Class.js";
+import Student from "../models/Student.js";
+import {
+  buildScopeFilter,
+  resolveBranchQueryFilter,
+} from "../middleware/branchScope.js";
+import { isAllowed } from "../rbac/permissions.js";
 import { ROLES } from "../config/constants.js";
 import {
   getClassTeacherClassIds,
@@ -7,9 +13,45 @@ import {
   isAssignedToClassSubject,
 } from "../utils/teacherScope.js";
 
+const forbidden = (res, message) =>
+  res.status(403).json({
+    success: false,
+    message: message || "You do not have permission to mark attendance.",
+  });
+
+// Attendance has no `branch` field of its own, and strictQuery silently
+// drops the `branch` key buildScopeFilter adds - so branch isolation goes
+// through the record's class instead. Returns the _ids (as strings) of
+// every class in the caller's branch(es), or null for super_admin (no
+// restriction).
+async function branchClassIds(user) {
+  if (user.role === ROLES.SUPER_ADMIN) return null;
+  const { filter } = resolveBranchQueryFilter(user);
+  const classes = await Class.find(filter).select("_id").lean();
+  return classes.map((c) => String(c._id));
+}
+
+const inBranch = (classIds, classId) =>
+  classIds === null || classIds.includes(String(classId));
+
+// True when every student_id belongs to `classId`.
+async function studentsInClass(classId, studentIds) {
+  const unique = [...new Set(studentIds.map(String))];
+  if (unique.length === 0) return true;
+  const count = await Student.countDocuments({
+    _id: { $in: unique },
+    class: classId,
+  });
+  return count === unique.length;
+}
+
 // GET /api/attendance
 export const list = async (req, res) => {
   try {
+    if (!isAllowed("Attendance", "read", req.user.role)) {
+      return forbidden(res, "You do not have permission to view attendance.");
+    }
+
     const { date, subject, sort, limit } = req.query;
     const classId = req.query.class_id || req.query.class;
     const branchFilter = buildScopeFilter("Attendance", req.user);
@@ -73,6 +115,11 @@ export const list = async (req, res) => {
       }
     }
 
+    const allowedClassIds = await branchClassIds(req.user);
+    if (allowedClassIds !== null) {
+      filter.$and = [{ class: { $in: allowedClassIds } }];
+    }
+
     let query = Attendance.find(filter);
     if (sort) query = query.sort(sort);
     if (limit) query = query.limit(Number(limit));
@@ -99,8 +146,26 @@ export const bulkMark = async (req, res) => {
       });
     }
 
+    if (!isAllowed("Attendance", "create", req.user.role)) {
+      return forbidden(res);
+    }
+
     const branchFilter = buildScopeFilter("Attendance", req.user);
     const classId = class_id;
+    if (!inBranch(await branchClassIds(req.user), classId)) {
+      return forbidden(res, "That class does not belong to your branch.");
+    }
+    if (
+      !(await studentsInClass(
+        classId,
+        records.map((r) => r.student_id),
+      ))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Every student must belong to the selected class.",
+      });
+    }
     if (req.user.role === ROLES.TEACHER) {
       const assignments = await getTeacherSubjectAssignments(req.user);
       if (!isAssignedToClassSubject(assignments, classId, subject)) {
@@ -157,8 +222,21 @@ export const bulkMark = async (req, res) => {
 // POST /api/attendance - single-record create, kept for other callers
 export const create = async (req, res) => {
   try {
-    const { class: classId, subject } = req.body;
-    const branchFilter = buildScopeFilter("Attendance", req.user);
+    if (!isAllowed("Attendance", "create", req.user.role)) {
+      return forbidden(res);
+    }
+
+    const { class: classId, subject, student_id, student_name, date, status } =
+      req.body;
+    if (!inBranch(await branchClassIds(req.user), classId)) {
+      return forbidden(res, "That class does not belong to your branch.");
+    }
+    if (!student_id || !(await studentsInClass(classId, [student_id]))) {
+      return res.status(400).json({
+        success: false,
+        message: "The student must belong to the selected class.",
+      });
+    }
 
     if (req.user.role === ROLES.TEACHER) {
       const assignments = await getTeacherSubjectAssignments(req.user);
@@ -171,9 +249,12 @@ export const create = async (req, res) => {
     }
 
     const record = await Attendance.create({
-      ...req.body,
+      student_id,
+      student_name,
       class: classId,
-      ...branchFilter,
+      subject,
+      date,
+      status,
       marked_by: req.user.id,
     });
     return res.status(201).json({ success: true, data: record });
@@ -188,12 +269,16 @@ export const create = async (req, res) => {
 // PUT /api/attendance/:id
 export const update = async (req, res) => {
   try {
+    if (!isAllowed("Attendance", "update", req.user.role)) {
+      return forbidden(res);
+    }
+
     const branchFilter = buildScopeFilter("Attendance", req.user);
     const existing = await Attendance.findOne({
       _id: req.params.id,
       ...branchFilter,
     });
-    if (!existing) {
+    if (!existing || !inBranch(await branchClassIds(req.user), existing.class)) {
       return res
         .status(404)
         .json({ success: false, message: "Attendance record not found." });
@@ -211,7 +296,10 @@ export const update = async (req, res) => {
       }
     }
 
-    Object.assign(existing, req.body, { marked_by: req.user.id });
+    // Only the mark itself may change - never which student, class, subject
+    // or date the record is about, since the checks above ran against those.
+    if (req.body.status !== undefined) existing.status = req.body.status;
+    existing.marked_by = req.user.id;
     await existing.save();
     return res.json({ success: true, data: existing });
   } catch (err) {

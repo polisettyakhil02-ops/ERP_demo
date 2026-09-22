@@ -2,27 +2,43 @@ import Homework from "../models/Homework.js";
 import Student from "../models/Student.js";
 import Class from "../models/Class.js";
 import HomeworkNotification from "../models/HomeworkNotification.js";
+import { isAllowed } from "../rbac/permissions.js";
+import { resolveBranchQueryFilter } from "../middleware/branchScope.js";
+import { ROLES } from "../config/constants.js";
 import {
   getTeacherClassIds,
   getTeacherSubjectAssignments,
   isAssignedToClassSubject,
 } from "../utils/teacherScope.js";
 
+const ENTITY = "Homework";
+
+const forbidden = (res) =>
+  res.status(403).json({
+    success: false,
+    message: "You do not have permission to manage homework.",
+  });
+
+// Branch filter for every Homework query - single-branch roles are pinned
+// to their own branch, super_admin is unrestricted.
+const homeworkScope = (user) => resolveBranchQueryFilter(user).filter;
+
 // GET /api/homework
 // Query params (all optional): class_id, status, sort, limit
 export const list = async (req, res) => {
   try {
+    if (!isAllowed(ENTITY, "read", req.user.role)) return forbidden(res);
+
     const { class_id, status, sort, limit } = req.query;
-    const branchFilter = req.branchFilter || {}; // TODO: wire to your branch-scoping helper
+    const branchFilter = homeworkScope(req.user);
 
     const filter = { ...branchFilter };
     if (status) filter.status = status;
 
-    if (req.user.role === "teacher") {
-      const teacherClassIds = await getTeacherClassIds(
-        req.user.id,
-        branchFilter,
-      );
+    if (req.user.role === ROLES.TEACHER) {
+      // teacherScope helpers compare against userId._id, so they need the
+      // user document, not req.user.id (a string).
+      const teacherClassIds = await getTeacherClassIds(req.user, branchFilter);
 
       if (class_id && !teacherClassIds.includes(String(class_id))) {
         return res.status(403).json({
@@ -36,6 +52,18 @@ export const list = async (req, res) => {
       }
 
       filter.class = class_id || { $in: teacherClassIds };
+    } else if (req.user.role === ROLES.STUDENT) {
+      // A student only ever sees their own class's homework.
+      const student = req.user.linked_student_id
+        ? await Student.findOne({
+            _id: req.user.linked_student_id,
+            ...branchFilter,
+          })
+            .select("class")
+            .lean()
+        : null;
+      if (!student) return res.json({ success: true, data: [] });
+      filter.class = student.class;
     } else if (class_id) {
       filter.class = class_id;
     }
@@ -60,12 +88,15 @@ export const list = async (req, res) => {
 // POST /api/homework
 export const create = async (req, res) => {
   try {
-    const { class: classId, subject } = req.body;
-    const branchFilter = req.branchFilter || {};
+    if (!isAllowed(ENTITY, "create", req.user.role)) return forbidden(res);
 
-    if (req.user.role === "teacher") {
+    const { class: classId, subject, title, description, due_date, status } =
+      req.body;
+    const branchFilter = homeworkScope(req.user);
+
+    if (req.user.role === ROLES.TEACHER) {
       const assignments = await getTeacherSubjectAssignments(
-        req.user.id,
+        req.user,
         branchFilter,
       );
 
@@ -78,8 +109,12 @@ export const create = async (req, res) => {
       }
     }
 
-    // Fetch the class to get its branch
-    const classDoc = await Class.findById(classId).select("branch");
+    // Fetch the class to get its branch - only a class in the caller's own
+    // branch counts.
+    const classDoc = await Class.findOne({
+      _id: classId,
+      ...branchFilter,
+    }).select("branch");
 
     if (!classDoc) {
       return res.status(404).json({
@@ -89,7 +124,11 @@ export const create = async (req, res) => {
     }
 
     const record = await Homework.create({
-      ...req.body,
+      title,
+      subject,
+      description,
+      due_date,
+      status,
       class: classId,
       branch: classDoc.branch,
       assigned_by: req.user.id,
@@ -117,7 +156,9 @@ export const create = async (req, res) => {
 // DELETE /api/homework/:id
 export const remove = async (req, res) => {
   try {
-    const branchFilter = req.branchFilter || {};
+    if (!isAllowed(ENTITY, "delete", req.user.role)) return forbidden(res);
+
+    const branchFilter = homeworkScope(req.user);
     const existing = await Homework.findOne({
       _id: req.params.id,
       ...branchFilter,
@@ -128,9 +169,9 @@ export const remove = async (req, res) => {
         .json({ success: false, message: "Homework not found." });
     }
 
-    if (req.user.role === "teacher") {
+    if (req.user.role === ROLES.TEACHER) {
       const assignments = await getTeacherSubjectAssignments(
-        req.user.id,
+        req.user,
         branchFilter,
       );
       if (
@@ -164,7 +205,10 @@ export const remove = async (req, res) => {
 // from the client.
 export const notify = async (req, res) => {
   try {
-    const branchFilter = req.branchFilter || {};
+    if (!isAllowed("HomeworkNotification", "create", req.user.role))
+      return forbidden(res);
+
+    const branchFilter = homeworkScope(req.user);
     const hw = await Homework.findOne({ _id: req.params.id, ...branchFilter });
     if (!hw) {
       return res
@@ -172,9 +216,9 @@ export const notify = async (req, res) => {
         .json({ success: false, message: "Homework not found." });
     }
 
-    if (req.user.role === "teacher") {
+    if (req.user.role === ROLES.TEACHER) {
       const assignments = await getTeacherSubjectAssignments(
-        req.user.id,
+        req.user,
         branchFilter,
       );
       if (!isAssignedToClassSubject(assignments, hw.class, hw.subject)) {
@@ -186,11 +230,11 @@ export const notify = async (req, res) => {
       }
     }
 
-    // NOTE: assumes Student has a `class_id` ref field (same convention
-    // used by attendance/marks elsewhere in this codebase).
+    // Student's field is `class`. This used to filter on `class_id`, which
+    // strictQuery silently dropped, so every active student got notified.
     const classStudents = await Student.find({
-      ...branchFilter,
-      class_id: hw.class,
+      branch: hw.branch,
+      class: hw.class,
       status: "Active",
     }).select("_id full_name");
 
@@ -199,7 +243,6 @@ export const notify = async (req, res) => {
     }
 
     const notifications = classStudents.map((s) => ({
-      ...branchFilter,
       homework_id: hw._id,
       title: hw.title,
       subject: hw.subject,

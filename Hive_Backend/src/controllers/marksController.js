@@ -29,16 +29,45 @@
 // body key and the Mongoose field are both still literally `class`.
 
 import Marks from "../models/Marks.js";
+import { isAllowed } from "../rbac/permissions.js";
+import { ROLES } from "../config/constants.js";
 import {
   getClassTeacherClassIds,
   getTeacherSubjectAssignments,
   isAssignedToClassSubject,
 } from "../utils/teacherScope.js";
 
+const forbidden = (res, action) =>
+  res.status(403).json({
+    success: false,
+    message: `You do not have permission to ${action} marks.`,
+  });
+
+// Fields a marks entry may carry from the client. class/branch/teacher_id
+// are always set server-side, and an update may only change the score
+// fields - never which student, class or subject the record is about,
+// since the teacher's assignment check ran against those.
+const CREATE_FIELDS = [
+  "marks_id",
+  "student_id",
+  "exam_type",
+  "subject",
+  "marks_obtained",
+  "max_marks",
+  "grade",
+];
+const UPDATE_FIELDS = ["exam_type", "marks_obtained", "max_marks", "grade"];
+
+const pick = (body = {}, fields) =>
+  Object.fromEntries(fields.filter((f) => f in body).map((f) => [f, body[f]]));
+
 // GET /api/marks
 // Query params (all optional): class, exam_type, subject, student_id, sort, limit
 export const list = async (req, res) => {
   try {
+    if (!isAllowed("Marks", "read", req.user.role))
+      return forbidden(res, "view");
+
     const {
       class: classId,
       exam_type,
@@ -52,6 +81,14 @@ export const list = async (req, res) => {
     const filter = { ...branchFilter };
     if (exam_type) filter.exam_type = exam_type;
     if (student_id) filter.student_id = student_id;
+    // A student only ever sees their own marks (studentOwnOnly in
+    // rbac/permissions.js), whatever student_id they ask for.
+    if (req.user.role === ROLES.STUDENT) {
+      if (!req.user.linked_student_id) {
+        return res.json({ success: true, data: [] });
+      }
+      filter.student_id = req.user.linked_student_id;
+    }
 
     if (req.user.role === "teacher") {
       const classTeacherClassIds = await getClassTeacherClassIds(req.user);
@@ -125,7 +162,7 @@ export const create = async (req, res) => {
     }
 
     const record = await Marks.create({
-      ...req.body,
+      ...pick(req.body, CREATE_FIELDS),
       class: classId,
       branch: req.user.branch,
       teacher_id: req.user.id,
@@ -142,6 +179,9 @@ export const create = async (req, res) => {
 // PUT /api/marks/:id
 export const update = async (req, res) => {
   try {
+    if (!isAllowed("Marks", "update", req.user.role))
+      return forbidden(res, "edit");
+
     const existing = await Marks.findOne({
       _id: req.params.id,
       branch: req.user.branch,
@@ -168,7 +208,9 @@ export const update = async (req, res) => {
       }
     }
 
-    Object.assign(existing, req.body, { teacher_id: req.user.id });
+    Object.assign(existing, pick(req.body, UPDATE_FIELDS), {
+      teacher_id: req.user.id,
+    });
     await existing.save();
     return res.json({ success: true, data: existing });
   } catch (err) {
