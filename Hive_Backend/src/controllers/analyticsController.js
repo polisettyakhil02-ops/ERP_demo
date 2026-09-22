@@ -1,0 +1,737 @@
+import Student from "../models/Student.js";
+import User from "../models/User.js";
+import Class from "../models/Class.js";
+import Attendance from "../models/Attendance.js";
+import Marks from "../models/Marks.js";
+import FeePayment from "../models/FeePayment.js";
+import StudentFeeReport from "../models/StudentFeeReport.js";
+import Income from "../models/Income.js";
+import Expenditure from "../models/Expenditure.js";
+import Admission from "../models/Admission.js";
+import Branch from "../models/Branch.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { resolveBranchQueryFilter } from "../middleware/branchScope.js";
+import { BRANCHES, ROLES } from "../config/constants.js";
+
+const NOT_DELETED = { is_deleted: { $ne: true } };
+
+// Branch scoping for every aggregate-backed endpoint below.
+//
+// This used to be `{ branch: req.user.branch }` for anything that wasn't
+// super_admin, which was wrong twice over for a multi-branch role:
+//
+//   1. admin_officer is scoped by `branches` (plural). `branch` is required
+//      only for SINGLE_BRANCH_ROLES and userController forces it to null for
+//      multi-branch roles, so this produced `{ branch: null }` - and a null in
+//      an aggregate $match matches only documents whose branch is null or
+//      missing, i.e. none. Every endpoint here returned zeros for an Admin
+//      Officer. It went unnoticed because the only caller today
+//      (AccountsManagerDashboard) runs as accounts_manager, a single-branch
+//      role where `branch` IS set.
+//   2. super_admin's `?branch=` was passed through as the raw query string.
+//      .aggregate() hands $match straight to MongoDB with no casting, so a
+//      string never matches an ObjectId-typed field - the same footgun
+//      documented on resolveBranchQueryFilter itself.
+//
+// resolveBranchQueryFilter already solves both (single-branch pinning,
+// `$in: user.branches` for multi-branch, explicit ObjectId casting) and is
+// what fee/income/expenditure/concession/notification/user controllers use.
+// Throwing on `!allowed` keeps the call sites below unchanged - asyncHandler
+// forwards the ApiError to the error handler as a 403.
+function scopeFor(req) {
+  const { allowed, filter } = resolveBranchQueryFilter(
+    req.user,
+    req.query.branch,
+  );
+  if (!allowed) {
+    throw new ApiError(403, "You do not have access to that branch.");
+  }
+  return filter;
+}
+
+function dateRange(req) {
+  const range = {};
+  if (req.query.from) range.$gte = new Date(req.query.from);
+  if (req.query.to) range.$lte = new Date(req.query.to);
+  return Object.keys(range).length ? range : null;
+}
+
+// Real outstanding fee balance, summed across every StudentFeeReport bucket
+// (Admission/Term/Transport/Application/Registration + old_fee/"Previous
+// Due"), clamped at 0 per bucket so a credit in one bucket never offsets
+// genuine pending in another - matches the same figure the Fee Payments
+// page's Pending Fees tab shows. Deliberately NOT sourced from
+// FeePayment.status: collectPayment() always stamps "Paid" on every real
+// payment, so a FeePayment with status "Pending" never actually exists -
+// querying that field for "pending" always returned 0.
+function pendingFeesAgg(scope) {
+  const balanceFields = [
+    "balance_adm_fee",
+    "balance_term_fee",
+    "balance_transport_fee",
+    "balance_hostel_fee",
+    "balance_application_fee",
+    "balance_registration_fee",
+    "old_fee",
+  ];
+  return StudentFeeReport.aggregate([
+    { $match: { ...scope, ...NOT_DELETED, status: "Active" } },
+    {
+      $project: {
+        pendingAmount: {
+          $add: balanceFields.map((f) => ({
+            $max: [{ $ifNull: [`$${f}`, 0] }, 0],
+          })),
+        },
+      },
+    },
+    { $match: { pendingAmount: { $gt: 0 } } },
+    { $group: { _id: null, total: { $sum: "$pendingAmount" }, count: { $sum: 1 } } },
+  ]);
+}
+
+// GET /api/analytics/overview
+export const overview = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const baseFilter = { ...scope, ...NOT_DELETED };
+
+  // Attendance.date (and FeePayment.payment_date) are always saved from a
+  // bare "YYYY-MM-DD" string - `new Date("2026-07-26")` parses that as UTC
+  // midnight, regardless of what timezone this server process happens to
+  // be running in. Computing "today"/"this month" via `new Date().setHours()`
+  // instead anchors to the SERVER's local timezone, which silently drifts
+  // out of sync with that UTC-midnight encoding for any server not running
+  // in UTC (e.g. a server on IST is permanently offset by 5:30) - today's
+  // attendance would come back looking empty even though it was marked.
+  // Deriving both boundaries from the UTC calendar date instead keeps this
+  // correct no matter what TZ the process runs under.
+  const now = new Date();
+  const startOfMonth = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0),
+  );
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0),
+  );
+  const todayEnd = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+
+  // Attendance (models/Attendance.js) has no `branch` field of its own -
+  // it only stores `class` as the Class document's _id (as a string, see
+  // attendanceController.js). Matching `branch` directly against it (as
+  // baseFilter does for every other collection here) matches zero
+  // documents for any single-branch role, since that field never exists
+  // on an Attendance record - it only LOOKED like it worked for
+  // super_admin/admin_officer because an unset `scope.branch` skips the
+  // filter entirely and returns every branch's attendance unscoped.
+  // Resolve this branch's Class _ids first and match against those instead.
+  const attendanceMatch = {
+    ...NOT_DELETED,
+    date: { $gte: todayStart, $lte: todayEnd },
+  };
+  if (scope.branch) {
+    const branchClassIds = await Class.find({
+      branch: scope.branch,
+      is_deleted: { $ne: true },
+    }).distinct("_id");
+    attendanceMatch.class = { $in: branchClassIds.map(String) };
+  }
+
+  const [
+    totalStudents,
+    activeStudents,
+    totalStaff,
+    feeThisMonthAgg,
+    otherIncomeThisMonthAgg,
+    feePendingAgg,
+    todayAttendance,
+    pendingAdmissions,
+  ] = await Promise.all([
+    Student.countDocuments(baseFilter),
+    Student.countDocuments({ ...baseFilter, status: "Active" }),
+    User.countDocuments({
+      ...baseFilter,
+      role: { $ne: ROLES.STUDENT },
+      is_active: true,
+    }),
+    FeePayment.aggregate([
+      {
+        $match: {
+          ...baseFilter,
+          status: "Paid",
+          payment_date: { $gte: startOfMonth },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Income.aggregate([
+      { $match: { ...baseFilter, date: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    pendingFeesAgg(scope),
+    Attendance.aggregate([
+      { $match: attendanceMatch },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]),
+    Admission.countDocuments({
+      ...baseFilter,
+      form_status: { $in: ["Enquiry", "Applied", "Under Review"] },
+    }),
+  ]);
+
+  const attendanceMap = Object.fromEntries(
+    todayAttendance.map((a) => [a._id, a.count]),
+  );
+
+  const feeCollectedThisMonth = feeThisMonthAgg[0]?.total || 0;
+  const otherIncomeThisMonth = otherIncomeThisMonthAgg[0]?.total || 0;
+
+  res.json({
+    branch_scope: scope.branch || "all_branches",
+    total_students: totalStudents,
+    active_students: activeStudents,
+    total_staff: totalStaff,
+    fee_collected_this_month: feeCollectedThisMonth,
+    other_income_this_month: otherIncomeThisMonth,
+    total_income_this_month: feeCollectedThisMonth + otherIncomeThisMonth,
+    fee_pending: feePendingAgg[0]?.total || 0,
+    today_attendance: {
+      present: attendanceMap.Present || 0,
+      absent: attendanceMap.Absent || 0,
+      late: attendanceMap.Late || 0,
+    },
+    pending_admissions: pendingAdmissions,
+  });
+});
+
+// GET /api/analytics/fees-summary?academic_year=&from=&to=
+export const feesSummary = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const match = { ...scope, ...NOT_DELETED };
+  if (req.query.academic_year) match.academic_year = req.query.academic_year;
+  const range = dateRange(req);
+  if (range) match.payment_date = range;
+
+  const [byType, byMonth, feePaymentByStatus, byClass, pendingAgg] = await Promise.all([
+    FeePayment.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$fee_type",
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { total: -1 } },
+    ]),
+    FeePayment.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            y: { $year: "$payment_date" },
+            m: { $month: "$payment_date" },
+          },
+          total: { $sum: "$amount" },
+        },
+      },
+      { $sort: { "_id.y": 1, "_id.m": 1 } },
+    ]),
+    FeePayment.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$status",
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    StudentFeeReport.aggregate([
+      { $match: { ...scope, ...NOT_DELETED } },
+      {
+        $group: {
+          _id: "$class",
+          net_term_fee: { $sum: "$net_term_fee" },
+          paid_term_fee: { $sum: "$paid_term_fee" },
+          balance_term_fee: { $sum: "$balance_term_fee" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    pendingFeesAgg(scope),
+  ]);
+
+  // "Pending" never comes from FeePayment.status - collectPayment() always
+  // stamps "Paid" on a real payment, so that status value never actually
+  // occurs; replace/inject the real figure from StudentFeeReport balances.
+  const byStatus = [
+    ...feePaymentByStatus.filter((s) => s._id !== "Pending"),
+    {
+      _id: "Pending",
+      total: pendingAgg[0]?.total || 0,
+      count: pendingAgg[0]?.count || 0,
+    },
+  ];
+
+  res.json({
+    by_fee_type: byType,
+    by_month: byMonth,
+    by_status: byStatus,
+    by_class: byClass,
+  });
+});
+
+// GET /api/analytics/attendance-summary?class=&from=&to=
+export const attendanceSummary = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const match = { ...scope, ...NOT_DELETED };
+  if (req.query.class) match.class = req.query.class;
+  const range = dateRange(req);
+  if (range) match.date = range;
+
+  const [byStatus, byClass, trend] = await Promise.all([
+    Attendance.aggregate([
+      { $match: match },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]),
+    Attendance.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { class: "$class", status: "$status" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Attendance.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+            status: "$status",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.date": 1 } },
+    ]),
+  ]);
+
+  const totalMarked = byStatus.reduce((sum, s) => sum + s.count, 0);
+  const present = byStatus.find((s) => s._id === "Present")?.count || 0;
+  const attendancePct = totalMarked
+    ? Math.round((present / totalMarked) * 1000) / 10
+    : 0;
+
+  res.json({
+    overall_attendance_pct: attendancePct,
+    by_status: byStatus,
+    by_class: byClass,
+    trend,
+  });
+});
+
+// GET /api/analytics/academic-performance?class=&exam_type=&subject=
+export const academicPerformance = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const match = { ...scope, ...NOT_DELETED };
+  if (req.query.class) match.class = req.query.class;
+  if (req.query.exam_type) match.exam_type = req.query.exam_type;
+  if (req.query.subject) match.subject = req.query.subject;
+
+  const [bySubject, byClass, distribution] = await Promise.all([
+    Marks.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$subject",
+          avg_pct: {
+            $avg: {
+              $multiply: [{ $divide: ["$marks_obtained", "$max_marks"] }, 100],
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    Marks.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: "$class",
+          avg_pct: {
+            $avg: {
+              $multiply: [{ $divide: ["$marks_obtained", "$max_marks"] }, 100],
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    Marks.aggregate([
+      { $match: match },
+      {
+        $bucket: {
+          groupBy: {
+            $multiply: [{ $divide: ["$marks_obtained", "$max_marks"] }, 100],
+          },
+          boundaries: [0, 35, 50, 60, 75, 90, 100.01],
+          default: "other",
+          output: { count: { $sum: 1 } },
+        },
+      },
+    ]),
+  ]);
+
+  res.json({
+    by_subject: bySubject,
+    by_class: byClass,
+    score_distribution: distribution,
+  });
+});
+
+// GET /api/analytics/income-expenditure?from=&to=
+export const incomeExpenditure = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const matchIncome = { ...scope, ...NOT_DELETED };
+  const matchExp = { ...scope, ...NOT_DELETED };
+  const range = dateRange(req);
+  if (range) {
+    matchIncome.date = range;
+    matchExp.date = range;
+  }
+
+  const [incomeByMonth, expByMonth, expByCategory, totalsArr] =
+    await Promise.all([
+      Income.aggregate([
+        { $match: matchIncome },
+        {
+          $group: {
+            _id: { y: { $year: "$date" }, m: { $month: "$date" } },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id.y": 1, "_id.m": 1 } },
+      ]),
+      Expenditure.aggregate([
+        { $match: matchExp },
+        {
+          $group: {
+            _id: { y: { $year: "$date" }, m: { $month: "$date" } },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id.y": 1, "_id.m": 1 } },
+      ]),
+      Expenditure.aggregate([
+        { $match: matchExp },
+        { $group: { _id: "$category", total: { $sum: "$amount" } } },
+        { $sort: { total: -1 } },
+      ]),
+      Promise.all([
+        Income.aggregate([
+          { $match: matchIncome },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        Expenditure.aggregate([
+          { $match: matchExp },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+      ]),
+    ]);
+
+  const totalIncome = totalsArr[0][0]?.total || 0;
+  const totalExpenditure = totalsArr[1][0]?.total || 0;
+
+  res.json({
+    total_income: totalIncome,
+    total_expenditure: totalExpenditure,
+    net: totalIncome - totalExpenditure,
+    income_by_month: incomeByMonth,
+    expenditure_by_month: expByMonth,
+    expenditure_by_category: expByCategory,
+  });
+});
+
+// GET /api/analytics/branch-comparison  (super_admin ONLY now - route-gated;
+// previously "Accounts Manager / Super Admin" per the old comment, narrowed
+// to match scopeFor() above now that Accounts Manager is branch-scoped-only.
+// Make sure the actual route middleware for this endpoint is updated to
+// match - I don't have that routes file in this conversation to edit directly.)
+export const branchComparison = asyncHandler(async (req, res) => {
+  const results = await Promise.all(
+    BRANCHES.map(async (branch) => {
+      const match = { branch, ...NOT_DELETED };
+      const [students, staff, feeAgg, attendanceAgg] = await Promise.all([
+        Student.countDocuments(match),
+        User.countDocuments({ ...match, role: { $ne: ROLES.STUDENT } }),
+        FeePayment.aggregate([
+          { $match: { ...match, status: "Paid" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        Attendance.aggregate([
+          { $match: match },
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+      ]);
+      const attMap = Object.fromEntries(
+        attendanceAgg.map((a) => [a._id, a.count]),
+      );
+      const totalAtt = Object.values(attMap).reduce((a, b) => a + b, 0);
+      return {
+        branch,
+        total_students: students,
+        total_staff: staff,
+        fee_collected: feeAgg[0]?.total || 0,
+        attendance_pct: totalAtt
+          ? Math.round(((attMap.Present || 0) / totalAtt) * 1000) / 10
+          : 0,
+      };
+    }),
+  );
+  res.json({ branches: results });
+});
+
+// GET /api/analytics/admissions-funnel?academic_year=
+export const admissionsFunnel = asyncHandler(async (req, res) => {
+  const scope = scopeFor(req);
+  const match = { ...scope, ...NOT_DELETED };
+  if (req.query.academic_year) match.academic_year = req.query.academic_year;
+
+  const funnel = await Admission.aggregate([
+    { $match: match },
+    { $group: { _id: "$form_status", count: { $sum: 1 } } },
+  ]);
+  const byClass = await Admission.aggregate([
+    { $match: match },
+    { $group: { _id: "$class_sought", count: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+  ]);
+
+  res.json({ funnel, by_class_sought: byClass });
+});
+
+// GET /api/analytics/dashboard-stats?branch=<branchId>&from=&to=
+// Admin dashboard stats - returns enrollment, fee collection, income, and
+// expenditure data. Supports date range filtering via ?from= and ?to= query params.
+//
+// For admin_officer: Returns stats only for branches in req.user.branches array.
+//   - If ?branch param: validates it's in their assigned branches, returns stats for that branch only
+//   - If no ?branch param: returns combined stats + individual stats for only their branches
+//
+// For super_admin: Returns stats for all branches (or filtered to ?branch if provided).
+//
+// Response includes:
+//   - accessible_branches: list of branch IDs the user can access
+//   - selected_branch: currently selected branch (if ?branch param was provided)
+//   - all_branches: individual stats for each accessible branch
+//   - combined_stats: aggregated stats for all accessible branches (or selected branch)
+export const dashboardStats = asyncHandler(async (req, res) => {
+  const range = dateRange(req);
+  let accessibleBranches = [];
+  let selectedBranch = null;
+
+  // Determine which branches this user can access
+  if (req.user.role === "admin_officer") {
+    // admin_officer: restricted to their assigned branches
+    if (!req.user.branches || req.user.branches.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No branches assigned to your account.",
+      });
+    }
+
+    accessibleBranches = req.user.branches.map((b) =>
+      typeof b === "object" ? b._id : b,
+    );
+
+    // If ?branch param provided, validate it's in their list
+    if (req.query.branch) {
+      const branchId = String(req.query.branch);
+      const isBranchAllowed = accessibleBranches.some(
+        (b) => String(b) === branchId,
+      );
+      if (!isBranchAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: "You do not have access to this branch.",
+        });
+      }
+      selectedBranch = branchId;
+    }
+  } else if (req.user.role === "super_admin") {
+    // super_admin: can access all branches
+    const allBranches = await Branch.find({}).select("_id").lean();
+    accessibleBranches = allBranches.map((b) => b._id);
+
+    // If ?branch param provided, use it
+    if (req.query.branch) {
+      selectedBranch = String(req.query.branch);
+    }
+  } else {
+    // Other roles don't have dashboard access
+    return res.status(403).json({
+      success: false,
+      message: "You do not have permission to view the dashboard.",
+    });
+  }
+
+  // Helper to calculate stats for a given filter
+  const getStatsForFilter = async (filter) => {
+    const studentCount = await Student.countDocuments({
+      ...filter,
+      status: "Active",
+      ...NOT_DELETED,
+    });
+
+    const feeCollectionsResult = await FeePayment.aggregate([
+      {
+        $match: {
+          ...filter,
+          status: "Paid",
+          ...(range ? { payment_date: range } : {}),
+          ...NOT_DELETED,
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const feeCollections =
+      feeCollectionsResult.length > 0 ? feeCollectionsResult[0].total : 0;
+
+    const incomeResult = await Income.aggregate([
+      {
+        $match: {
+          ...filter,
+          ...(range ? { date: range } : {}),
+          ...NOT_DELETED,
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalIncome = incomeResult.length > 0 ? incomeResult[0].total : 0;
+
+    const expenditureCountResult = await Expenditure.countDocuments({
+      ...filter,
+      ...(range ? { date: range } : {}),
+      ...NOT_DELETED,
+    });
+
+    const expenditureResult = await Expenditure.aggregate([
+      {
+        $match: {
+          ...filter,
+          ...(range ? { date: range } : {}),
+          ...NOT_DELETED,
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalExpenditure =
+      expenditureResult.length > 0 ? expenditureResult[0].total : 0;
+
+    // "Total Income" is Fee Payments + the Income model combined - was
+    // previously just `totalIncome` (Income model only), silently
+    // excluding every rupee of fee revenue from this stat and from
+    // net_balance below.
+    const combinedIncome = feeCollections + totalIncome;
+    const netBalance = combinedIncome - totalExpenditure;
+
+    return {
+      students: studentCount,
+      fee_collections: Math.round(feeCollections * 100) / 100,
+      other_income: Math.round(totalIncome * 100) / 100,
+      total_income: Math.round(combinedIncome * 100) / 100,
+      expenses_entered: expenditureCountResult,
+      total_expenditure: Math.round(totalExpenditure * 100) / 100,
+      net_balance: Math.round(netBalance * 100) / 100,
+    };
+  };
+
+  // Resolve the assigned ids against real Branch documents before anything
+  // below counts or reports them.
+  //
+  // accessibleBranches came straight out of User.branches, which is never
+  // validated: deleting a Branch does not pull its id from the users that
+  // were assigned to it, so a stale id lingers there indefinitely. That id
+  // then inflated `accessible_branches` (and the branch dropdown built from
+  // it) while `all_branches` - built from this same Branch lookup - did not
+  // count it, so the two disagreed and the "Total Branches" tile showed a
+  // different number from the dropdown. Resolving once here makes every
+  // figure below come from the same source, and de-duplicates as a side
+  // effect since a $in lookup returns each document once.
+  const branchDocs = await Branch.find({ _id: { $in: accessibleBranches } })
+    .select("_id name code")
+    .lean();
+  accessibleBranches = branchDocs.map((b) => b._id);
+
+  // A ?branch= that passed the assignment check above but no longer exists
+  // would otherwise query a deleted branch and report zeros as if they were
+  // real figures.
+  if (
+    selectedBranch &&
+    !accessibleBranches.some((b) => String(b) === String(selectedBranch))
+  ) {
+    return res.status(404).json({
+      success: false,
+      message: "That branch no longer exists.",
+    });
+  }
+
+  // Determine which branches to query for stats
+  const branchesToQuery = selectedBranch
+    ? [selectedBranch]
+    : accessibleBranches;
+
+  // Combined stats for the branches being queried
+  const combinedStats = await getStatsForFilter({
+    branch: { $in: branchesToQuery },
+  });
+
+  // Individual branch stats (only if not filtering to a single branch)
+  let allBranchesWithStats = [];
+  if (!selectedBranch) {
+    // Reuses branchDocs from the resolution above rather than re-querying -
+    // same documents, and it guarantees all_branches and accessible_branches
+    // can never disagree.
+    allBranchesWithStats = await Promise.all(
+      branchDocs.map(async (branch) => {
+        const stats = await getStatsForFilter({ branch: branch._id });
+        return {
+          _id: branch._id,
+          name: branch.name,
+          code: branch.code,
+          ...stats,
+        };
+      }),
+    );
+  }
+
+  res.json({
+    success: true,
+    data: {
+      date_range: range
+        ? {
+            from: range.$gte?.toISOString().split("T")[0],
+            to: range.$lte?.toISOString().split("T")[0],
+          }
+        : null,
+      accessible_branches: accessibleBranches.map((b) => String(b)), // List of branch IDs user can access
+      selected_branch: selectedBranch, // Currently selected branch (if any)
+      all_branches: allBranchesWithStats,
+      combined_stats: combinedStats,
+    },
+  });
+});
